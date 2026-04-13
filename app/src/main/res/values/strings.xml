@@ -1,0 +1,31 @@
+<resources>
+    <string name="app_name">DroidKiSS</string>
+    <string name="app_info_btn">About the app</string>
+    <string name="load_doll">Load KiSS doll (.lzh)"</string>
+    <string name="close_current_doll">Close current doll</string>
+    <string name="load_another_doll">Load another doll (.lzh)</string>
+    <string name="load_expansion_set">Load expansion set (.lzh)</string>
+    <string name="select_cnf">Select configuration</string>
+    <string name="take_doll_screenshot">Take doll screenshot</string>
+    <string name="saved_screenshot_toast">Saved screenshot</string>
+    <string name="zoom_in">Zoom in +</string>
+    <string name="zoom_out">Zoom out -</string>
+    <string name="zoom_reset">Reset zoom</string>
+    <string name="mode">Mode</string>
+    <string name="mode_scroll">Scroll</string>
+    <string name="mode_drag_press">Drag + press</string>
+    <string name="reset_positions">Reset positions</string>
+    <string name="error">Error</string>
+    <string name="error_return">Return</string>
+    <string name="cancel">Cancel</string>
+    <string name="desc_app_logo">DroidKiSS logo</string>
+    <string name="desc_doll_menu">Doll menu</string>
+    <string name="desc_doll_cel">A cel of a KiSS doll</string>
+    <string name="app_info_title">About the app</string>
+    <string name="dev_caller">Developer:</string>
+    <string name="license_caller">License:</string>
+    <string name="source_code_caller">Source code</string>
+    <string name="website_caller">Developer\'s website</string>
+    <string name="app_version_caller">Version:</string>
+    <string name="close">Close</string>
+</resources>

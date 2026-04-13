@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="ImpliedTouchscreenHardware,MissingLeanbackLauncher">
+
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="false" />
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/droidkiss_icon"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/droidkiss_icon_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.DroidKiSS">
+        <activity
+            android:name=".MainActivity"
+            android:windowSoftInputMode="adjustResize"
+            android:exported="true"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|screenLayout"
+            android:label="DroidKiSS"
+            android:theme="@style/Theme.DroidKiSS"
+            tools:ignore="DiscouragedApi">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <!-- Handle common schemes -->
+                <data android:scheme="file" />
+                <data android:scheme="content" />
+
+                <!-- Associate by extension (using host and pathPattern) -->
+                <data android:host="*" />
+                <data android:pathPattern=".*\\.lzh" />
+                <data android:pathSuffix=".lzh"
+                    tools:targetApi="31" />
+
+                <!-- It is also highly recommended to use a MIME type -->
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

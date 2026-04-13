@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DroidKiSS</string>
+    <string name="app_info_btn">Over de app</string>
+    <string name="load_doll">Laad KiSS Doll (.lzh)</string>
+    <string name="close_current_doll">Sluit huidige Doll</string>
+    <string name="load_another_doll">Laad een andere Doll (.lzh)</string>
+    <string name="load_expansion_set">Laad Expansion Set (.lzh)</string>
+    <string name="select_cnf">Selecteer configuratie</string>
+    <string name="take_doll_screenshot">Maak Doll-screenshot</string>
+    <string name="saved_screenshot_toast">Screenshot opgeslagen</string>
+    <string name="zoom_in">Inzoomen +</string>
+    <string name="zoom_out">Uitzoomen -</string>
+    <string name="zoom_reset">Herstel zoom</string>
+    <string name="mode">Modus</string>
+    <string name="mode_scroll">Scrollen</string>
+    <string name="mode_drag_press">Slepen + tikken</string>
+    <string name="reset_positions">Herstel posities</string>
+    <string name="error">Fout</string>
+    <string name="error_return">Ga terug</string>
+    <string name="cancel">Annuleren</string>
+    <string name="desc_app_logo">DroidKiSS-logo</string>
+    <string name="desc_doll_menu">Menu voor Dolls</string>
+    <string name="desc_doll_cel">Een KiSS Doll-cel</string>
+    <string name="app_info_title">Over de app</string>
+    <string name="source_code_caller">Broncode</string>
+    <string name="dev_caller">Ontwikkelaar:</string>
+    <string name="license_caller">Licentie:</string>
+    <string name="website_caller">Website ontwikkelaar</string>
+    <string name="app_version_caller">Versie:</string>
+    <string name="close">Sluiten</string>
+</resources>
