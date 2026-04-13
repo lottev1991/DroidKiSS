@@ -15,7 +15,7 @@ class ArchiveRepository(private val context: Context) {
         val inputStream = try {
             cr.openInputStream(uri)
         } catch (e: Exception) {
-            null
+            e.printStackTrace()
         }
 
         if (inputStream == null) {
@@ -48,7 +48,7 @@ class ArchiveRepository(private val context: Context) {
                 output.toByteArray()
             }
         } catch (e: Exception) {
-            null
-        }
+            e.printStackTrace()
+        } as ByteArray?
     }
 }

@@ -222,7 +222,7 @@ class MainActivity : ComponentActivity() {
     /** When the app shuts down. */
     override fun onDestroy() {
         viewModel.executeEvent("end")
-        //viewModel.soundManager.soundPool.stop(0)
+        viewModel.soundManager.stopAll()
         viewModel.stopTimer()
         super.onDestroy()
     }

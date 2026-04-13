@@ -236,6 +236,7 @@ class ViewModel(application: Application) :
                 zoomLevel = 1.0
             } catch (e: Exception) {
                 uiState = KissUiState.Error(e.message ?: e.toString())
+                e.printStackTrace()
             }
         }
     }
@@ -271,6 +272,7 @@ class ViewModel(application: Application) :
                 changeSet(0)
             } catch (e: Exception) {
                 uiState = KissUiState.Error(e.message ?: e.toString())
+                e.printStackTrace()
             }
         }
     }
@@ -735,6 +737,7 @@ class ViewModel(application: Application) :
 
                     ActionType.SOUND -> {
                         val target = action.target.replace("\"", "").lowercase()
+                        soundManager.stopSound() // Stop currently-playing sound to avoid overlap
                         soundManager.play(target)
                     }
 
@@ -790,6 +793,7 @@ class ViewModel(application: Application) :
                 }
             } catch (e: Exception) {
                 uiState = KissUiState.Error(e.message ?: e.toString())
+                e.printStackTrace()
             }
 
         }
@@ -1037,8 +1041,11 @@ class ViewModel(application: Application) :
                         }
                     }
                 }
-                ActionType.SOUND -> soundManager.play(action.target)
-//               ActionType.CHANGESET -> changeSet(action.target.toInt())
+                ActionType.CHANGESET -> changeSet(action.target.toInt())
+                ActionType.SOUND -> {
+                    soundManager.stopSound()
+                    soundManager.play(action.target)
+                }
                 ActionType.MUSIC -> {
                     val doll = currentDoll ?: return@forEach
 
@@ -1103,7 +1110,10 @@ class ViewModel(application: Application) :
                 ActionType.ALTMAP -> altMappingStrict(action.target)
                 ActionType.TIMER -> fireTimer(action)
                 ActionType.RANDOM_TIMER -> fireRandomTimer(action)
-                ActionType.SOUND -> soundManager.play(action.target)
+                ActionType.SOUND -> {
+                    soundManager.stopSound()
+                    soundManager.play(action.target)
+                }
                 ActionType.CHANGESET -> changeSet(action.target.toIntOrNull() ?: 0)
                 ActionType.MUSIC -> {
                     val doll = currentDoll ?: return@forEach
@@ -1305,7 +1315,10 @@ class ViewModel(application: Application) :
                         targetLayer?.let { triggerReleaseByName(action.target) }
                     }
                 }
-                ActionType.SOUND -> soundManager.play(action.target)
+                ActionType.SOUND -> {
+                    soundManager.stopSound()
+                    soundManager.play(action.target)
+                }
                 ActionType.MUSIC -> {
                     val doll = currentDoll ?: return@forEach
 
@@ -1370,7 +1383,10 @@ class ViewModel(application: Application) :
                 ActionType.ALTMAP -> altMappingStrict(action.target)
                 ActionType.TIMER -> fireTimer(action)
                 ActionType.RANDOM_TIMER -> fireRandomTimer(action)
-                ActionType.SOUND -> soundManager.play(action.target)
+                ActionType.SOUND -> {
+                    soundManager.stopSound()
+                    soundManager.play(action.target)
+                }
                 ActionType.MUSIC -> {
                     val doll = currentDoll ?: return@forEach
 
@@ -1449,7 +1465,10 @@ class ViewModel(application: Application) :
                 ActionType.ALTMAP -> altMappingStrict(action.target)
                 ActionType.TIMER -> fireTimer(action)
                 ActionType.RANDOM_TIMER -> fireRandomTimer(action)
-                ActionType.SOUND -> soundManager.play(action.target)
+                ActionType.SOUND -> {
+                    soundManager.stopSound()
+                    soundManager.play(action.target)
+                }
                 ActionType.CHANGESET -> changeSet(action.target.toIntOrNull() ?: 0)
                 ActionType.MUSIC -> {
                     val doll = currentDoll ?: return@forEach

@@ -90,8 +90,6 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 "out",
                 "collide",
                 "apart",
-                "sound",
-                "music",
                 "notify",
                 "set",
             )
