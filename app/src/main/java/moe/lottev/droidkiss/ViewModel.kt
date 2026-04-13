@@ -1452,10 +1452,7 @@ class ViewModel(application: Application) :
                 ActionType.ALTMAP -> altMappingStrict(action.target)
                 ActionType.TIMER -> fireTimer(action)
                 ActionType.RANDOM_TIMER -> fireRandomTimer(action)
-                ActionType.SOUND -> {
-                    soundManager.stopSound()
-                    soundManager.play(action.target)
-                }
+                ActionType.SOUND -> soundManager.play(action.target)
                 ActionType.CHANGESET -> changeSet(action.target.toIntOrNull() ?: 0)
                 ActionType.MUSIC -> {
                     val doll = currentDoll ?: return@forEach
