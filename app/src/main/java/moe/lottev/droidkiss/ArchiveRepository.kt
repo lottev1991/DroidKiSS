@@ -44,6 +44,7 @@ class ArchiveRepository(private val context: Context) {
         return try {
             archive.getInputStream(entry).use { input ->
                 val output = ByteArrayOutputStream()
+                if (input == null) return null
                 input.copyTo(output)
                 output.toByteArray()
             }

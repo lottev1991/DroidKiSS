@@ -118,7 +118,7 @@ class DollEngine(context: Context,
                     paletteLibrary[kcfName.lowercase()] = banks
                 }
             } else {
-
+                return@forEachIndexed
             }
         }
 

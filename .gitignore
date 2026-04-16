@@ -35,3 +35,11 @@ google-services.json
 
 # Other
 .kotlin/
+debug/
+release/
+app/release/
+full/debug/
+full/release/
+lite/debug/
+lite/release/
+*.dm

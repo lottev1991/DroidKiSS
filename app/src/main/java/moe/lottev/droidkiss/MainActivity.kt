@@ -262,6 +262,7 @@ fun AppInfoButton() {
             title = { Text(stringResource(R.string.app_info_title)) },
             text = {
                 Column {
+                    Text("${stringResource(R.string.app_name_caller)}: ${stringResource(R.string.app_name)}")
                     Text("${stringResource(R.string.app_version_caller)} $versionName")
                     Text("${stringResource(R.string.dev_caller)} Lotte V")
                     Text("${stringResource(R.string.license_caller)} GPL 3.0")
@@ -305,12 +306,12 @@ fun DollViewport(viewModel: ViewModel) {
     var viewportSize by remember { mutableStateOf(IntSize.Zero) }
 
     Box(modifier = Modifier
-            .fillMaxSize()
-            .clipToBounds()
-            .background(barColor)
-            .onGloballyPositioned { coords ->
-                viewportSize = coords.size
-            },
+        .fillMaxSize()
+        .clipToBounds()
+        .background(barColor)
+        .onGloballyPositioned { coords ->
+            viewportSize = coords.size
+        },
         contentAlignment = Alignment.Center,
     ) {
         if (viewportSize.width > 0 && viewportSize.height > 0) {

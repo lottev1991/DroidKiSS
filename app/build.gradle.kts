@@ -25,7 +25,7 @@ android {
         minSdk = 28
         targetSdk = 36
         versionCode = 1
-        versionName = "1.1-beta"
+        versionName = "1.2-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         signingConfig = signingConfigs.getByName("debug")
@@ -50,6 +50,32 @@ android {
             )
         }
     }
+
+    flavorDimensions += "version"
+
+    productFlavors {
+        // 2. Define the 'lite' flavor
+        create("lite") {
+            dimension = "version"
+            applicationIdSuffix = ".lite"
+            versionNameSuffix = "-lite"
+
+            // Example: custom field for code logic
+            buildConfigField("boolean", "IS_LITE", "true")
+            manifestPlaceholders["appLabel"] = "@string/app_name"
+        }
+
+        // 3. Define the 'full' flavor
+        create("full") {
+            dimension = "version"
+            applicationIdSuffix = ".full"
+            versionNameSuffix = "-full"
+
+            buildConfigField("boolean", "IS_LITE", "false")
+            manifestPlaceholders["appLabel"] = "@string/app_name"
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -57,6 +83,7 @@ android {
     buildFeatures {
         compose = true
         viewBinding = true
+        buildConfig = true
     }
     dependenciesInfo {
         includeInApk = false
@@ -64,6 +91,17 @@ android {
     }
     buildToolsVersion = "36.1.0"
     ndkVersion = "29.0.14206865"
+    sourceSets {
+        getByName("main") {
+            assets {
+                srcDirs("src/main/assets", "src/full/assets")
+            }
+        }
+    }
+
+    configurations.all {
+        exclude(group = "com.google.guava", module = "listenablefuture")
+    }
 }
 
 dependencies {
@@ -77,7 +115,6 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compiler)
     implementation(libs.androidx.compose.runtime)
-    implementation(libs.ads.mobile.sdk)
     implementation(libs.androidx.compose.foundation.layout)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.leanback)
@@ -86,7 +123,8 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.foundation)
     implementation(libs.androidx.foundation.layout)
-    implementation(libs.libvlc.all)
+    implementation(libs.androidx.appcompat)
+    "fullImplementation"(libs.libvlc.all)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

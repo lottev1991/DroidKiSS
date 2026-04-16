@@ -1,9 +1,31 @@
 <p align="center">
-    <img src="droidkiss_logo.svg">
+    <img alt="DroidKiSS logo" src="droidkiss_logo.svg">
 </p>
 <p align="center">
     A vintage KiSS doll viewer for modern Android.
 </p>
+
+<p align="center">
+    <a href="https://github.com/lottev1991/droidkiss/releases">
+        <img alt="DroidKiSS download button, which links to the Releases tab" width=350 alt="DroidKiSS logo" src="droidkiss_dl_btn.svg">
+    </a>
+</p>
+
+## App editions
+
+DroidKiSS comes in "Full" and "Lite" editions. Don't worry, both editions are free of charge and contain no ads. There is no "premium" edition and I don't do ads.
+
+The only real difference between the editions is that the Full edition incorporates LibVLC, whereas Lite does not. Now, you need to understand that LibVLC is a *huge* library; VLC is known to essentially incorporate every single media encoding known to man. Just by including this library alone, the Full edition is **four times as large as Lite**. Crazy, right?
+
+Now, the reason I created a version incorporating LibVLC in the first place is because many old dolls contain non-PCM WAV files. Android's default MediaPlayer and SoundPool classes simply do *not* like non-PCM WAV files. (If you don't know what that means: let's just say that PCM is the "standard" for WAV, but technically they can use other codecs. The thing is though that those other codecs don't have universal support.)
+
+This *does* mean that certain audio files simply will not play in the Lite edition; it's a tradeoff, and at this point, essentially by design. This problem does not exist in the Full edition, but as I said, the app size is much larger. I guess it all depends on how important you think audio in KiSS dolls is.
+
+A related difference is the fact that I included a soundfont file for playing MIDIs in the Full version. This is because LibVLC requires one; it does *not* use the on-board MIDI card. The default Android media player does, however, and therefore it's not included in Lite. I made sure to use a good-sounding soundfont for the Full version with a compatible license. Either way, because of this, MIDIs will sound different in each version, although the actual quality difference should be minimal (the on-board Android card isn't actually that bad, in my opinion).
+
+By the way, you can install both editions side by side, just in case you wanted to do that. They do not conflict.
+
+---
 
 ## What are KiSS dolls?
 KiSS dolls are vintage digital dress up games, first developed in Japan all the way back in the early 90s. They predate Flash, as well as most modern JavaScript standards. The term "KiSS" is an acronym for "Kisekae Set System" ("kisekae"（着せ替え<sub>（きせかえ）</sub>）meaning "to dress up" in Japanese).
@@ -21,7 +43,7 @@ KiSS dolls are vintage digital dress up games, first developed in Japan all the 
 As you can see, KiSS mostly uses its own exclusive file types and standards. On top of that, it uses the archaic LZH format for compressing/packaging dolls. As a result, it is not a very accessible format for modern users. I hope to make it slightly more accessible with this app.
 
 ### One handy tip for using this app
-Long-pressing an object will "unfix" it if not draggable, and "fix" it if draggable. On desktop viewers, this is usually done through right-clicking the object and selecting "Unfix" from a context menu. Obviously, you can't right-click on a phone (and I thought a context menu would be overkill), so I utilized a simple long-press as a substitute.
+Long-pressing an object will "unfix" it if not draggable, and "fix" it if draggable. On desktop viewers, this is usually done through right-clicking the object and selecting "Unfix" and "Refix" from a context menu. Obviously, you can't right-click on a phone (and I thought a context menu would be overkill), so I utilized a simple long-press as a substitute.
 
 ## Why I created this app
 As a child, I was obsessed with KiSS dolls. I didn't know how to do JavaScript yet, and Flash was also "too difficult", so at the time I never bothered with all that and instead stuck with KiSS. And to be fair, the FKiSS scripting language is relatively easy to understand, even for a child. So, in the days before Scratch, I attempted (keyword) to make my own dolls.
@@ -33,7 +55,7 @@ Back to the modern day. While I've long since retired from creating KiSS dolls, 
 Now, this project is by no means the first viewer for Android. However, the other viewers have either been discontinued or lack some features I consider essential. Most importantly, though: *none of them work on modern 64-bit Android systems*. All of these factors have made me decide to create my own viewer. And thankfully, unlike when I was 12, I now actually know a little bit about programming, making it much less scary to create my own viewer. <sub>Though, I did have to restart like 5 times or so. In fact, I almost gave up; yet, here I am, with an actually functioning app.</sub>
 
 ## Known bugs
-- Some WAV/AU files will not play, remaining silent instead; this is a limitation of the native Android sound API. Basically, only PCM-encoded WAV/AU files will play. The only way to solve this problem would be to incorporate FFmpeg into the project. Given how huge that library is, I'm not sure yet if I wanna deal with that. Therefore, for now: tough luck, and I'm sorry. (I'm willing to consider FFmpeg again if enough feedback is given in its favor. Do keep the app size in mind, however.)
+- ~~Some WAV/AU files will not play, remaining silent instead; this is a limitation of the native Android sound API. Basically, only PCM-encoded WAV/AU files will play. The only way to solve this problem would be to incorporate FFmpeg into the project. Given how huge that library is, I'm not sure yet if I wanna deal with that. Therefore, for now: tough luck, and I'm sorry. (I'm willing to consider FFmpeg again if enough feedback is given in its favor. Do keep the app size in mind, however.)~~ No longer present in the Full version of the app. It persists in Lite; this is by design, since it keeps the app lightweight by not using `libvlc`.
 - Object bounding boxes are currently being calculated from the width and height of only one cel within said object, meaning that sometimes, objects can "clip" weirdly at the edges. One day, I hope to make this calculation object-dependent instead (I've tried before, and it sadly wasn't working out at the time, so for now, this will have to do).
 
 If you encounter any more bugs that I perhaps missed, please feel free to open an [issue](https://github.com/lottev1991/droidkiss/issues).

@@ -11,7 +11,7 @@
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/droidkiss_icon"
-        android:label="@string/app_name"
+        android:label="${appLabel}"
         android:roundIcon="@mipmap/droidkiss_icon_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.DroidKiSS">
@@ -21,7 +21,6 @@
             android:exported="true"
             android:screenOrientation="sensorLandscape"
             android:configChanges="orientation|screenSize|screenLayout"
-            android:label="DroidKiSS"
             android:theme="@style/Theme.DroidKiSS"
             tools:ignore="DiscouragedApi">
             <intent-filter>

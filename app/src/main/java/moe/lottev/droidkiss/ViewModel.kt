@@ -136,7 +136,7 @@ class ViewModel(application: Application) :
                 }
 
                 if (currentAlarms.isEmpty()) {
-                    delay(100)
+                    delay(1)
                     continue
                 }
 
@@ -171,7 +171,7 @@ class ViewModel(application: Application) :
         executeEvent("end")
 
         // Stop all sounds
-        soundManager.stopAll()
+        soundManager.release()
 
         // Stop timer
         stopTimer()
@@ -241,6 +241,7 @@ class ViewModel(application: Application) :
         }
     }
 
+    @Suppress("unused")
     /** Load expansion set into the viewmodel */
     fun loadExpansionSet(context: Context, uri: Uri, specificCnf: String? = null) {
 
@@ -480,10 +481,6 @@ class ViewModel(application: Application) :
                     targetLayer.x - targetLayer.descriptor.celOffsetX + targetOffset.x
                 val targetVisualY =
                     targetLayer.y - targetLayer.descriptor.celOffsetY + targetOffset.y
-
-                // The Ideal VISUAL position for the snapped object
-//               val targetVisualX = rule.xValue
-//               val targetVisualY = rule.yValue
 
                 // The current VISUAL position of the dragged object
                 val currentVisualX =
@@ -1041,7 +1038,10 @@ class ViewModel(application: Application) :
                     }
                 }
                 ActionType.CHANGESET -> changeSet(action.target.toInt())
-                ActionType.SOUND -> soundManager.play(action.target)
+                ActionType.SOUND -> {
+                    val target = action.target.replace("\"", "").lowercase()
+                    soundManager.play(target)
+                }
                 ActionType.MUSIC -> {
                     val doll = currentDoll ?: return@forEach
 
@@ -1106,8 +1106,11 @@ class ViewModel(application: Application) :
                 ActionType.ALTMAP -> altMappingStrict(action.target)
                 ActionType.TIMER -> fireTimer(action)
                 ActionType.RANDOM_TIMER -> fireRandomTimer(action)
-                ActionType.SOUND -> soundManager.play(action.target)
                 ActionType.CHANGESET -> changeSet(action.target.toIntOrNull() ?: 0)
+                ActionType.SOUND -> {
+                    val target = action.target.replace("\"", "").lowercase()
+                    soundManager.play(target)
+                }
                 ActionType.MUSIC -> {
                     val doll = currentDoll ?: return@forEach
 
@@ -1308,7 +1311,10 @@ class ViewModel(application: Application) :
                         targetLayer?.let { triggerReleaseByName(action.target) }
                     }
                 }
-                ActionType.SOUND -> soundManager.play(action.target)
+                ActionType.SOUND -> {
+                    val target = action.target.replace("\"", "").lowercase()
+                    soundManager.play(target)
+                }
                 ActionType.MUSIC -> {
                     val doll = currentDoll ?: return@forEach
 
@@ -1373,7 +1379,10 @@ class ViewModel(application: Application) :
                 ActionType.ALTMAP -> altMappingStrict(action.target)
                 ActionType.TIMER -> fireTimer(action)
                 ActionType.RANDOM_TIMER -> fireRandomTimer(action)
-                ActionType.SOUND -> soundManager.play(action.target)
+                ActionType.SOUND -> {
+                    val target = action.target.replace("\"", "").lowercase()
+                    soundManager.play(target)
+                }
                 ActionType.MUSIC -> {
                     val doll = currentDoll ?: return@forEach
 
@@ -1444,7 +1453,6 @@ class ViewModel(application: Application) :
         val actionsByName = configParser.unfixActions[fileName] ?: emptyList()
         val allActions = (actionsById + actionsByName).distinct()
 
-        // any debugging action i put here at the top does trigger, but nothin in the allActions loop does. i don't know why
         allActions.forEach { action ->
             when (action.type) {
                 ActionType.UNMAP -> setMappingStrict(action.target, true)
@@ -1452,8 +1460,11 @@ class ViewModel(application: Application) :
                 ActionType.ALTMAP -> altMappingStrict(action.target)
                 ActionType.TIMER -> fireTimer(action)
                 ActionType.RANDOM_TIMER -> fireRandomTimer(action)
-                ActionType.SOUND -> soundManager.play(action.target)
                 ActionType.CHANGESET -> changeSet(action.target.toIntOrNull() ?: 0)
+                ActionType.SOUND -> {
+                    val target = action.target.replace("\"", "").lowercase()
+                    soundManager.play(target)
+                }
                 ActionType.MUSIC -> {
                     val doll = currentDoll ?: return@forEach
                     val rawTarget = action.target

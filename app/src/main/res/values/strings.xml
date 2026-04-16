@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">DroidKiSS</string>
+    <string name="app_name_caller">App name</string>
     <string name="app_info_btn">About the app</string>
     <string name="load_doll">Load KiSS doll (.lzh)"</string>
     <string name="close_current_doll">Close current doll</string>

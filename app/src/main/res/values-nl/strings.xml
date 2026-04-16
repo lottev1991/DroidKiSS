@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">DroidKiSS</string>
+    <string name="app_name_caller">Naam app</string>
     <string name="app_info_btn">Over de app</string>
     <string name="load_doll">Laad KiSS Doll (.lzh)</string>
     <string name="close_current_doll">Sluit huidige Doll</string>
