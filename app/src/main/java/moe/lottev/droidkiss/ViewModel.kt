@@ -67,6 +67,7 @@ class ViewModel(application: Application) :
         data class Loaded(val doll: KissDoll) : KissUiState()
         data class Error(val message: String) : KissUiState()
     }
+
     var currentDoll: KissDoll? = null
 
     private val setOffsets = mutableStateMapOf<Int, SnapshotStateMap<Int, Offset>>()
@@ -136,7 +137,7 @@ class ViewModel(application: Application) :
                 }
 
                 if (currentAlarms.isEmpty()) {
-                    delay(1)
+                    delay(100)
                     continue
                 }
 
@@ -171,7 +172,7 @@ class ViewModel(application: Application) :
         executeEvent("end")
 
         // Stop all sounds
-        soundManager.release()
+        soundManager.stopAll()
 
         // Stop timer
         stopTimer()
@@ -193,7 +194,7 @@ class ViewModel(application: Application) :
     }
 
     @Suppress("unused")
-    /** Load LZH into the viewmodel */
+            /** Load LZH into the viewmodel */
     fun loadLzh(context: Context, uri: Uri, specificCnf: String? = null) {
         uiState = KissUiState.Loading
         viewModelScope.launch {
@@ -241,7 +242,6 @@ class ViewModel(application: Application) :
         }
     }
 
-    @Suppress("unused")
     /** Load expansion set into the viewmodel */
     fun loadExpansionSet(context: Context, uri: Uri, specificCnf: String? = null) {
 
@@ -370,7 +370,10 @@ class ViewModel(application: Application) :
             if (currentActiveContext == newSet || currentActiveContext == 0) {
                 // Only run actions, ignore the triggers themselves (press)
                 // Blacklisting "altmap" is important, otherwise it will think "altmap" = "map"
-                if (!trimmed.contains("press(") && !trimmed.contains("altmap(") && !trimmed.contains("release(")) {
+                if (!trimmed.contains("press(") && !trimmed.contains("altmap(") && !trimmed.contains(
+                        "release("
+                    )
+                ) {
                     processActionLine(trimmed)
                 }
             }
@@ -570,6 +573,7 @@ class ViewModel(application: Application) :
                             immediateQueue.add(id)
                         }
                     }
+
                     ActionType.MOVE -> moveRelativeFromSelf(action)
                     ActionType.MOVEBYX, ActionType.MOVEBYY -> moveRelative(action)
                     ActionType.MOVETO -> {
@@ -751,6 +755,7 @@ class ViewModel(application: Application) :
                             soundManager.stopMusic()
                         }
                     }
+
                     ActionType.NOTIFY -> {
                         val target = action.target.trim()
                             .removePrefix("(").removeSuffix(")") // Strip parentheses if they exist
@@ -760,6 +765,7 @@ class ViewModel(application: Application) :
 
                         showNotify(target)
                     }
+
                     ActionType.CHANGESET -> changeSet(action.target.toIntOrNull() ?: 0)
                     ActionType.UNFIX -> {
                         // Target is a string
@@ -779,12 +785,14 @@ class ViewModel(application: Application) :
 
                         if (targetLayer != null) targetLayer.descriptor.isFixed = false
                     }
+
                     ActionType.QUIT -> {
                         val state = uiState
                         if (state is KissUiState.Loaded) {
                             uiState = KissUiState.Empty
                         }
                     }
+
                     else -> {}
                 }
             } catch (e: Exception) {
@@ -1037,6 +1045,7 @@ class ViewModel(application: Application) :
                         }
                     }
                 }
+
                 ActionType.CHANGESET -> changeSet(action.target.toInt())
                 ActionType.SOUND -> {
                     val target = action.target.replace("\"", "").lowercase()
@@ -1057,11 +1066,13 @@ class ViewModel(application: Application) :
                         soundManager.stopMusic()
                     }
                 }
+
                 ActionType.NOTIFY -> {
                     val target = action.target.trim().removeSurrounding("\"").removeSurrounding("'")
 
                     showNotify(target)
                 }
+
                 ActionType.UNFIX -> {
                     // Target is a string
                     val target = action.target.replace("#", "").lowercase()
@@ -1080,6 +1091,7 @@ class ViewModel(application: Application) :
                     // Recursively call with the found Layer
                     if (targetLayer != null) targetLayer.descriptor.isFixed = false
                 }
+
                 else -> {}
             }
         }
@@ -1088,6 +1100,7 @@ class ViewModel(application: Application) :
 
     // Track which objects are currently being "forced" visible by a press
     val activePressIds = mutableStateListOf<Int>()
+
     /**
     `press()` FKiSS event
      */
@@ -1106,11 +1119,12 @@ class ViewModel(application: Application) :
                 ActionType.ALTMAP -> altMappingStrict(action.target)
                 ActionType.TIMER -> fireTimer(action)
                 ActionType.RANDOM_TIMER -> fireRandomTimer(action)
-                ActionType.CHANGESET -> changeSet(action.target.toIntOrNull() ?: 0)
                 ActionType.SOUND -> {
                     val target = action.target.replace("\"", "").lowercase()
                     soundManager.play(target)
                 }
+
+                ActionType.CHANGESET -> changeSet(action.target.toIntOrNull() ?: 0)
                 ActionType.MUSIC -> {
                     val doll = currentDoll ?: return@forEach
 
@@ -1126,6 +1140,7 @@ class ViewModel(application: Application) :
                         soundManager.stopMusic()
                     }
                 }
+
                 ActionType.PRESS -> {
                     // Target is a string
                     val target = action.target.replace("#", "").lowercase()
@@ -1146,6 +1161,7 @@ class ViewModel(application: Application) :
                         executePressActions(it)
                     }
                 }
+
                 ActionType.CATCH -> {
                     val target = action.target.replace("#", "").lowercase()
                     val targetId = target.toIntOrNull()
@@ -1189,6 +1205,7 @@ class ViewModel(application: Application) :
                         targetLayer?.let { executePressActions(it) }
                     }
                 }
+
                 ActionType.UNFIX -> {
                     // Target is a string
                     val target = action.target.replace("#", "").lowercase()
@@ -1218,6 +1235,7 @@ class ViewModel(application: Application) :
                         uiState = KissUiState.Empty
                     }
                 }
+
                 else -> {}
             }
         }
@@ -1243,10 +1261,12 @@ class ViewModel(application: Application) :
                     activePressIds.remove(targetId)
                     setMapping(action.target, false)
                 }
+
                 ActionType.UNMAP -> {
                     // If it was hidden, bring it back
                     setMapping(action.target, true)
                 }
+
                 else -> {}
             }
         }
@@ -1292,6 +1312,7 @@ class ViewModel(application: Application) :
                         targetLayer?.let { triggerReleaseByName(action.target) }
                     }
                 }
+
                 ActionType.FIXDROP -> {
                     val targetId = action.target.toIntOrNull()
                     val targetLayer = currentDoll?.layers?.find { layer ->
@@ -1311,10 +1332,12 @@ class ViewModel(application: Application) :
                         targetLayer?.let { triggerReleaseByName(action.target) }
                     }
                 }
+
                 ActionType.SOUND -> {
                     val target = action.target.replace("\"", "").lowercase()
                     soundManager.play(target)
                 }
+
                 ActionType.MUSIC -> {
                     val doll = currentDoll ?: return@forEach
 
@@ -1330,10 +1353,12 @@ class ViewModel(application: Application) :
                         soundManager.stopMusic()
                     }
                 }
+
                 ActionType.NOTIFY -> {
                     val target = action.target.trim().removeSurrounding("\"").removeSurrounding("'")
                     showNotify(target)
                 }
+
                 ActionType.UNFIX -> {
                     // Target is a string
                     val target = action.target.replace("#", "").lowercase()
@@ -1352,13 +1377,16 @@ class ViewModel(application: Application) :
                     // Recursively call with the found Layer
                     if (targetLayer != null) targetLayer.descriptor.isFixed = false
                 }
+
                 ActionType.QUIT -> {
                     val state = uiState
                     if (state is KissUiState.Loaded) {
                         uiState = KissUiState.Empty
                     }
                 }
-                else -> {/* Add more if necessary (TODO) */}
+
+                else -> {/* Add more if necessary (TODO) */
+                }
             }
         }
         refreshTrigger++
@@ -1419,6 +1447,7 @@ class ViewModel(application: Application) :
                         targetLayer?.let { triggerReleaseByName(action.target) }
                     }
                 }
+
                 ActionType.FIXDROP -> {
                     val targetId = target.toIntOrNull()
                     val targetLayer = currentDoll?.layers?.find { layer ->
@@ -1438,6 +1467,7 @@ class ViewModel(application: Application) :
                         targetLayer?.let { triggerReleaseByName(action.target) }
                     }
                 }
+
                 else -> {}
             }
         }
@@ -1453,6 +1483,7 @@ class ViewModel(application: Application) :
         val actionsByName = configParser.unfixActions[fileName] ?: emptyList()
         val allActions = (actionsById + actionsByName).distinct()
 
+        // any debugging action i put here at the top does trigger, but nothin in the allActions loop does. i don't know why
         allActions.forEach { action ->
             when (action.type) {
                 ActionType.UNMAP -> setMappingStrict(action.target, true)
@@ -1476,16 +1507,19 @@ class ViewModel(application: Application) :
                         soundManager.stopMusic()
                     }
                 }
+
                 ActionType.NOTIFY -> {
                     val target = action.target.trim().removeSurrounding("\"").removeSurrounding("'")
                     showNotify(target)
                 }
+
                 ActionType.QUIT -> {
                     val state = uiState
                     if (state is KissUiState.Loaded) {
                         uiState = KissUiState.Empty
                     }
                 }
+
                 else -> {}
             }
         }
@@ -1644,7 +1678,7 @@ class ViewModel(application: Application) :
     }
 
     /** `altmap()` FKiSS event ("strict" version) */
-    fun altMappingStrict(target: String){
+    fun altMappingStrict(target: String) {
         val cleanTarget = target.replace("#", "").lowercase().substringBefore(".")
         val numericId = if (!target.contains(".")) cleanTarget.toIntOrNull() else null
 

@@ -52,22 +52,40 @@ class SoundManager(private val context: Context) {
         val path = soundMap[soundName] ?: return
 
         try {
-            sfxPlayers[name]?.stop()
-            sfxPlayers[name]?.release()
-            // Create a new player only if one doesn't exist for this sound
-            val player = MediaPlayer(libVLC)
-            val media = Media(libVLC, path)
-            if (loop) media.addOption(":input-repeat=65535")
+            val existingPlayer = sfxPlayers[soundName]
 
-            player.media = media
-            media.release()
-            player.play()
+            if (existingPlayer != null) {
+                // If already playing, just restart it to prevent overlapping instances
+                if (existingPlayer.isPlaying) {
+                    existingPlayer.stop()
+                }
+                existingPlayer.play()
+            } else {
+                // Create a new player only if one doesn't exist for this sound
+                val player = MediaPlayer(libVLC)
+                val media = Media(libVLC, path)
+                if (loop) media.addOption(":input-repeat=65535")
 
-            sfxPlayers[soundName] = player
+                player.media = media
+                media.release()
+                player.play()
+
+                sfxPlayers[soundName] = player
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
+
+    fun stopSound() {
+        sfxPlayers.values.forEach {
+            it.stop()
+            it.release()
+        }
+        sfxPlayers.clear()
+        soundJob?.cancel()
+    }
+
 
     fun handleMusicAction(filename: String, allFiles: Map<String, ByteArray>) {
         val cleanName = filename.lowercase().trim()
@@ -76,9 +94,7 @@ class SoundManager(private val context: Context) {
             key == cleanName || key.endsWith("/$cleanName") || key.startsWith(cleanName)
         }
 
-        if (entry != null) {
-            playMidi(entry.value)
-        }
+        entry?.let { playMidi(it.value) }
     }
 
     private fun playMidi(bytes: ByteArray) {
