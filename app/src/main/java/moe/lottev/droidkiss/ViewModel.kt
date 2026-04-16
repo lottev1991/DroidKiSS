@@ -738,7 +738,7 @@ class ViewModel(application: Application) :
 
                     ActionType.SOUND -> {
                         val target = action.target.replace("\"", "").lowercase()
-                        soundManager.play(target)
+                        soundManager.play(target, false)
                     }
 
                     ActionType.MUSIC -> {
@@ -1049,7 +1049,7 @@ class ViewModel(application: Application) :
                 ActionType.CHANGESET -> changeSet(action.target.toInt())
                 ActionType.SOUND -> {
                     val target = action.target.replace("\"", "").lowercase()
-                    soundManager.play(target)
+                    soundManager.play(target, false)
                 }
                 ActionType.MUSIC -> {
                     val doll = currentDoll ?: return@forEach
@@ -1121,7 +1121,7 @@ class ViewModel(application: Application) :
                 ActionType.RANDOM_TIMER -> fireRandomTimer(action)
                 ActionType.SOUND -> {
                     val target = action.target.replace("\"", "").lowercase()
-                    soundManager.play(target)
+                    soundManager.play(target, false)
                 }
 
                 ActionType.CHANGESET -> changeSet(action.target.toIntOrNull() ?: 0)
@@ -1335,7 +1335,7 @@ class ViewModel(application: Application) :
 
                 ActionType.SOUND -> {
                     val target = action.target.replace("\"", "").lowercase()
-                    soundManager.play(target)
+                    soundManager.play(target, false)
                 }
 
                 ActionType.MUSIC -> {
@@ -1409,7 +1409,7 @@ class ViewModel(application: Application) :
                 ActionType.RANDOM_TIMER -> fireRandomTimer(action)
                 ActionType.SOUND -> {
                     val target = action.target.replace("\"", "").lowercase()
-                    soundManager.play(target)
+                    soundManager.play(target, false)
                 }
                 ActionType.MUSIC -> {
                     val doll = currentDoll ?: return@forEach
@@ -1494,7 +1494,7 @@ class ViewModel(application: Application) :
                 ActionType.CHANGESET -> changeSet(action.target.toIntOrNull() ?: 0)
                 ActionType.SOUND -> {
                     val target = action.target.replace("\"", "").lowercase()
-                    soundManager.play(target)
+                    soundManager.play(target, false)
                 }
                 ActionType.MUSIC -> {
                     val doll = currentDoll ?: return@forEach

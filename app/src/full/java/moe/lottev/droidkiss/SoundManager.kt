@@ -8,6 +8,8 @@ import org.videolan.libvlc.MediaPlayer
 import java.io.File
 
 class SoundManager(private val context: Context) {
+
+    // Initialize LibVLC with standard options
     private val libVLC: LibVLC by lazy {
         val args = arrayListOf(
             "-vvv",
@@ -25,15 +27,19 @@ class SoundManager(private val context: Context) {
     }
     private var musicPlayer: MediaPlayer? = null
 
-    // We store the players to reuse them and prevent "overlap" spam
+    // Store SFX players to manage overlapping sounds
     private val sfxPlayers = mutableMapOf<String, MediaPlayer>()
 
-    val soundMap = mutableMapOf<String, String>()
     var isMusicSuspended = false
     var isSoundSuspended = false
     var musicJob: Job? = null
     var soundJob: Job? = null
 
+    val soundMap = mutableMapOf<String, String>()
+
+    /**
+     * Loads sound bytes into a temp file for VLC to read.
+     */
     fun loadSound(name: String, bytes: ByteArray) {
         try {
             val soundName = name.lowercase()
@@ -52,40 +58,40 @@ class SoundManager(private val context: Context) {
         val path = soundMap[soundName] ?: return
 
         try {
-            val existingPlayer = sfxPlayers[soundName]
-
-            if (existingPlayer != null) {
-                // If already playing, just restart it to prevent overlapping instances
-                if (existingPlayer.isPlaying) {
-                    existingPlayer.stop()
-                }
-                existingPlayer.play()
-            } else {
-                // Create a new player only if one doesn't exist for this sound
-                val player = MediaPlayer(libVLC)
-                val media = Media(libVLC, path)
-                if (loop) media.addOption(":input-repeat=65535")
-
-                player.media = media
-                media.release()
-                player.play()
-
-                sfxPlayers[soundName] = player
+            // Clean up existing player for this specific sound
+            sfxPlayers[soundName]?.let {
+                it.stop()
+                it.release()
             }
+
+            val player = MediaPlayer(libVLC)
+            val media = Media(libVLC, path)
+
+            // Set looping if required
+            if (loop) {
+                media.addOption(":input-repeat=65535")
+            }
+
+            player.media = media
+            media.release() // The player retains the media
+
+            player.play()
+
+            // Cleanup for non-looping sounds
+            if (!loop) {
+                player.setEventListener { event ->
+                    if (event.type == MediaPlayer.Event.EndReached) {
+                        player.release()
+                        sfxPlayers.remove(soundName)
+                    }
+                }
+            }
+
+            sfxPlayers[soundName] = player
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
-
-    fun stopSound() {
-        sfxPlayers.values.forEach {
-            it.stop()
-            it.release()
-        }
-        sfxPlayers.clear()
-        soundJob?.cancel()
-    }
-
 
     fun handleMusicAction(filename: String, allFiles: Map<String, ByteArray>) {
         val cleanName = filename.lowercase().trim()
@@ -94,7 +100,9 @@ class SoundManager(private val context: Context) {
             key == cleanName || key.endsWith("/$cleanName") || key.startsWith(cleanName)
         }
 
-        entry?.let { playMidi(it.value) }
+        if (entry != null) {
+            playMidi(entry.value)
+        }
     }
 
     private fun playMidi(bytes: ByteArray) {
@@ -105,7 +113,7 @@ class SoundManager(private val context: Context) {
 
             musicPlayer = MediaPlayer(libVLC).apply {
                 val media = Media(libVLC, tempMidi.absolutePath)
-                media.addOption(":input-repeat=65535")
+                media.addOption(":input-repeat=65535") // High repeat count for looping
                 this.media = media
                 media.release()
                 play()
@@ -117,7 +125,9 @@ class SoundManager(private val context: Context) {
 
     fun pauseMusic() {
         isMusicSuspended = true
-        musicPlayer?.pause()
+        if (musicPlayer?.isPlaying == true) {
+            musicPlayer?.pause()
+        }
     }
 
     fun resumeMusic() {
@@ -127,8 +137,10 @@ class SoundManager(private val context: Context) {
 
     fun stopMusic() {
         musicJob?.cancel()
-        musicPlayer?.stop()
-        musicPlayer?.release()
+        musicPlayer?.apply {
+            stop()
+            release()
+        }
         musicPlayer = null
     }
 
@@ -156,8 +168,8 @@ class SoundManager(private val context: Context) {
 
     fun release() {
         stopAll()
-        libVLC.release()
         soundMap.clear()
+        libVLC.release() // Crucial to release the native LibVLC instance
     }
 
     private fun getSoundFontPath(fileName: String): String? {
