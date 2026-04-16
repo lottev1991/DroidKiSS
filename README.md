@@ -38,7 +38,7 @@ KiSS dolls are vintage digital dress up games, first developed in Japan all the 
 6. Objects are draggable by default. You have to set a "fix" value (usually above 100) to make them non-draggable.
 7. A typical KCF file contains 16 or 256 colors. This means that most CEL files are in an indexed format. However, true color is possible (called "Cherry KiSS", or "CKiSS" for short).
 8. Audio (WAV, AU, MIDI) is supported.
-9. Typically, KiSS dolls are distributed by packaging every relevant file into an LZH file.
+9. Typically, KiSS dolls are distributed by packaging every relevant file into an LZH archive.
 
 As you can see, KiSS mostly uses its own exclusive file types and standards. On top of that, it uses the archaic LZH format for compressing/packaging dolls. As a result, it is not a very accessible format for modern users. I hope to make it slightly more accessible with this app.
 
@@ -55,7 +55,7 @@ Back to the modern day. While I've long since retired from creating KiSS dolls, 
 Now, this project is by no means the first viewer for Android. However, the other viewers have either been discontinued or lack some features I consider essential. Most importantly, though: *none of them work on modern 64-bit Android systems*. All of these factors have made me decide to create my own viewer. And thankfully, unlike when I was 12, I now actually know a little bit about programming, making it much less scary to create my own viewer. <sub>Though, I did have to restart like 5 times or so. In fact, I almost gave up; yet, here I am, with an actually functioning app.</sub>
 
 ## Known bugs
-- ~~Some WAV/AU files will not play, remaining silent instead; this is a limitation of the native Android sound API. Basically, only PCM-encoded WAV/AU files will play. The only way to solve this problem would be to incorporate FFmpeg into the project. Given how huge that library is, I'm not sure yet if I wanna deal with that. Therefore, for now: tough luck, and I'm sorry. (I'm willing to consider FFmpeg again if enough feedback is given in its favor. Do keep the app size in mind, however.)~~ No longer present in the Full version of the app. It persists in Lite; this is by design, since it keeps the app lightweight by not using `libvlc`.
+- ~~Some WAV/AU files will not play, remaining silent instead; this is a limitation of the native Android sound API. Basically, only PCM-encoded WAV/AU files will play. The only way to solve this problem would be to incorporate FFmpeg into the project. Given how huge that library is, I'm not sure yet if I wanna deal with that. Therefore, for now: tough luck, and I'm sorry. (I'm willing to consider FFmpeg again if enough feedback is given in its favor. Do keep the app size in mind, however.)~~ No longer present in the Full version of the app. It persists in Lite; this is by design, since it keeps the app lightweight by not using LibVLC.
 - Object bounding boxes are currently being calculated from the width and height of only one cel within said object, meaning that sometimes, objects can "clip" weirdly at the edges. One day, I hope to make this calculation object-dependent instead (I've tried before, and it sadly wasn't working out at the time, so for now, this will have to do).
 
 If you encounter any more bugs that I perhaps missed, please feel free to open an [issue](https://github.com/lottev1991/droidkiss/issues).
