@@ -761,6 +761,10 @@ fun DollCanvas(doll: KissDoll, viewModel: ViewModel, graphicsLayer: GraphicsLaye
                                         viewModel.executeUnfixActions(hitLayer)
                                     }
 
+                                    if (!currentlyFixed) {
+                                        viewModel.executeSetFixActions(hitLayer)
+                                    }
+
                                     waitForUpOrCancellation()
                                 } else if (!wasDragInitiated) {
                                     // --- NO TIMEOUT, NO DRAG: This is a Tap ---
@@ -793,7 +797,7 @@ fun DollCanvas(doll: KissDoll, viewModel: ViewModel, graphicsLayer: GraphicsLaye
                     // Check Sets (The User Switch)
                     // If allowedSets is empty, it's a "base" item visible in all sets
                     val isInSet =
-                        (desc.allowedSets.isEmpty()) || desc.allowedSets.contains(viewModel.activeSet)
+                        desc.allowedSets.isEmpty() || desc.allowedSets.contains(viewModel.activeSet)
 
                     if (isInSet) {
                         val dragOffset = viewModel.currentOffsets[desc.objectId] ?: Offset.Zero

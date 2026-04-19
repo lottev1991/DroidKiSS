@@ -1,5 +1,7 @@
 package moe.lottev.droidkiss
 
+import kotlin.collections.forEach
+
 /** The config parser. This reads the CNF files and loads the data from it. */
 class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
     val cels = mutableListOf<KissLayerDescriptor>()
@@ -29,7 +31,10 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
     val setFixActions = mutableMapOf<String, List<KissAction>>()
     val unfixActions = mutableMapOf<String, List<KissAction>>()
 
+    val labelActions = mutableMapOf<String, List<KissAction>>()
+
     /** Global doll loader. This loads pretty much everything found in the current CNF. */
+    @Suppress("RegExpRedundantClassElement")
     fun load(data: ByteArray) {
         // Reset everything to class-level variables
         cels.clear()
@@ -61,9 +66,16 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 return@forEach
             }
 
+            val codePart = trimmed.split(";")[0].trim()
+            val lowerCode = codePart.lowercase()
+
             val lineForObjects = rawLine.trim().replaceFirst(";", "").trim()
             val lowerLine = lineForObjects.lowercase()
             var cleaned = rawLine.trim()
+
+            if (!codePart.contains("(") && lowerCode.contains(".cel")) {
+                parseCelLine(lineForObjects)
+            }
 
             if (cleaned.startsWith(";@")) {
                 cleaned = cleaned.substring(1).trim() // Remove the ; and keep the @
@@ -92,8 +104,13 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 "apart",
                 "notify",
                 "set",
+                "gosub",
+                "debug",
+                "version",
+                "ghost",
+                "nop",
             )
-            val hasForbiddenWord = forbidden.any { cleaned.contains(it) }
+            val hasForbiddenWord = forbidden.any { cleaned.contains(it) && !cleaned.contains("setfix") }
 
             val actionRegex = Regex("""(\w+)\s*\(([^)]+)\)""")
 
@@ -108,9 +125,10 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
             val isApartLine = cleaned.contains("apart(", ignoreCase = true)
             val isSetLine = cleaned.contains("set(", ignoreCase = true)
             val isUnfixLine = cleaned.contains("unfix(", ignoreCase = true)
+            val isLabelLine = cleaned.contains("label(", ignoreCase = true)
 
             val isNewHeader =
-                startsWithAt || isInLine || isPressLine || isReleaseLine || isCollideLine || isApartLine || isSetLine || isAlarmLine || isUnfixLine || (cleaned.contains("(") && !hasForbiddenWord)
+                startsWithAt || isInLine || isPressLine || isReleaseLine || isCollideLine || isApartLine || isSetLine || isAlarmLine || isUnfixLine || isLabelLine || (cleaned.contains("(") && !hasForbiddenWord)
             val isOldHeader = lowerLine.startsWith("begin") || lowerLine.startsWith("end")
 
             // Special events
@@ -136,6 +154,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                     isInLine -> "in($raw)"
                     isSetLine -> "set($raw)"
                     isUnfixLine -> "unfix($raw)"
+                    isLabelLine -> "label($raw)"
                     isOldHeader -> cleaned.substringAfter("begin").trim().lowercase()
                     cleaned.lowercase().contains("initialize") -> "initialize"
                     else -> cleaned.removePrefix(";").removePrefix("@").substringBefore("(").trim()
@@ -151,7 +170,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 // If there's more than 1 match, or if it's a messy line, grab everything
                 matches.forEach { match ->
                     val cmd = match.groupValues[1].trim().lowercase()
-                    val rawParams = match.groupValues[2].replace("\"", "") // This should be "LV4_A.CEL, 50"
+                    val rawParams = match.groupValues[2].replace("\"", "")
 
                     if (cmd == "press" && cleaned.contains("press(")) return@forEach
 
@@ -170,8 +189,6 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                         val triggerId = rawParams.replace("#", "").trim()
                         if (currentEventName?.contains(triggerId) == true) return@forEach
                     }
-
-                    val params = rawParams.split(",").map { it.trim().replace("\"", "") }
 
                     val type = when (cmd) {
                         "transparent" -> ActionType.TRANSPARENT
@@ -201,15 +218,22 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                         "changeset" -> ActionType.CHANGESET
                         "setfix" -> ActionType.SETFIX
                         "unfix" -> ActionType.UNFIX
+                        "gosub" -> ActionType.GOSUB
+                        "label" -> ActionType.LABEL
+                        "nop" -> ActionType.NOP
                         else -> null
                     }
 
-                    if (type != null) {
-                        val target = params[0].trim()
-                        val value = params.getOrNull(1)?.trim() ?: "0"
-                        val extraValue = params.getOrNull(2)?.trim() ?: "0"
+                    val parts = rawParams.split(",").map { it.trim() }
 
-                        currentEventActions.add(KissAction(target, type, value, extraValue))
+                    if (type != null) {
+                        val action = KissAction(
+                            target = parts.getOrNull(0) ?: "",
+                            type = type,
+                            valueStr = parts.getOrNull(1) ?: "null",
+                            extraValue = parts.getOrNull(2) ?: "null"
+                        )
+                        currentEventActions.add(action)
                     }
                 }
                 return@forEach
@@ -240,8 +264,6 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                     ) {
                         return@forEach
                     }
-
-
 
                     val rawParams = match.groupValues[2].replace("\"", "")
                     val parts = rawParams.split(",").map { it.trim() }
@@ -276,6 +298,9 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                         "changeset" -> ActionType.CHANGESET
                         "setfix" -> ActionType.SETFIX
                         "unfix" -> ActionType.UNFIX
+                        "gosub" -> ActionType.GOSUB
+                        "label" -> ActionType.LABEL
+                        "nop" -> ActionType.NOP
                         else -> null
                     }
 
@@ -290,10 +315,6 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                         )
                     }
                 }
-            }
-
-            if (!cleaned.contains("(") && lowerLine.contains(".cel")) {
-                parseCelLine(lineForObjects)
             }
 
             if (lowerLine.contains(".kcf")) {
@@ -335,6 +356,8 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
             setFixActions[cleanTrigger] = currentEventActions.toList()
         } else if (name.contains("unfix", ignoreCase = true)) {
             unfixActions[cleanTrigger] = currentEventActions.toList()
+        } else if (name.contains("label", ignoreCase = true)) {
+            labelActions[cleanTrigger] = currentEventActions.toList()
         } else {
             eventActions[name.lowercase().replace(" ", "")] = currentEventActions.toList()
         }
@@ -381,6 +404,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
     var lineCounter = 0 // Reset this every time you start parsing a new CNF
 
     /** Parses CEL lines from CNF. */
+    @Suppress("RegExpRedundantClassElement")
     private fun parseCelLine(line: String) {
         val trimmed = line.trim()
         if (trimmed.isEmpty()) return
@@ -586,6 +610,9 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 "changeset" -> ActionType.CHANGESET
                 "setfix" -> ActionType.SETFIX
                 "unfix" -> ActionType.UNFIX
+                "gosub" -> ActionType.GOSUB
+                "label" -> ActionType.LABEL
+                "nop" -> ActionType.NOP
                 else -> null
             }
 
@@ -595,7 +622,6 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                     if (rawTarget.startsWith("#")) rawTarget
                     else "#$resolvedTarget"
                 }
-
                 else -> {
                     // Keep as filename
                     rawTarget.replace("\"", "")

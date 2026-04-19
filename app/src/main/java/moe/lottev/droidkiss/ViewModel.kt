@@ -243,6 +243,7 @@ class ViewModel(application: Application) :
     }
 
     /** Load expansion set into the viewmodel */
+    @Suppress("unused")
     fun loadExpansionSet(context: Context, uri: Uri, specificCnf: String? = null) {
 
         availableCnfs = emptyList()
@@ -559,258 +560,144 @@ class ViewModel(application: Application) :
         // Regex for event IDs
         val eventId = Regex("""#(\d+)""").find(eventName)?.groupValues?.get(1)?.toIntOrNull() ?: -1
 
-        actions.forEach { action ->
-            try {
-                when (action.type) {
-                    ActionType.MAP -> setMapping(action.target, false)
-                    ActionType.UNMAP -> setMapping(action.target, true)
-                    ActionType.ALTMAP -> altMapping(action.target)
-                    ActionType.TIMER -> fireTimer(action)
-                    ActionType.RANDOM_TIMER -> fireRandomTimer(action)
-                    ActionType.ALARM -> {
-                        val id = action.target.trim().toIntOrNull() ?: return@forEach
-                        synchronized(immediateQueue) {
-                            immediateQueue.add(id)
-                        }
-                    }
-
-                    ActionType.MOVE -> moveRelativeFromSelf(action)
-                    ActionType.MOVEBYX, ActionType.MOVEBYY -> moveRelative(action)
-                    ActionType.MOVETO -> {
-                        val targetId = action.target.replace("#", "").toIntOrNull() ?: return
-                        val coords = action.valueStr.split(",")
-                        if (coords.size >= 2) {
-                            val tx = coords[0].trim().toIntOrNull() ?: 0
-                            val ty = coords[1].trim().toIntOrNull() ?: 0
-
-                            // Use the same math perfected earlier: Target - Initial = Offset
-                            val layer =
-                                currentDoll?.layers?.find { it.descriptor.objectId == targetId }
-                            if (layer != null) {
-                                val finalX = tx - layer.x
-                                val finalY = ty - layer.y
-                                currentOffsets[targetId] =
-                                    Offset(finalX.toFloat(), finalY.toFloat())
-                            }
-                        }
-                    }
-
-                    ActionType.IN -> configParser.parseInActions(action.target)
-                    ActionType.TRANSPARENT -> {
-                        val targetName = action.target.replace("\"", "").trim().lowercase()
-                        val valueStr = action.valueStr.trim().replace("\"", "")
-                        val amount = valueStr.toFloatOrNull() ?: 0f
-
-                        // If it doesn't look like an absolute reset (like 0 or 255),
-                        // try treating it as a relative step.
-                        // Or more simply: just treat everything in this doll as relative.
-                        currentDoll?.layers?.forEach { layer ->
-                            if (layer.descriptor.fileName.lowercase().startsWith(targetName)) {
-                                // Convert the KiSS 0-255 step to our 0.0-1.0 float step
-                                val delta = amount / 255f
-
-                                // Subtracting because KiSS 255 = Alpha 0 (Transparent)
-                                // So adding transparency means lowering the alpha.
-                                layer.alpha = (layer.alpha - delta).coerceIn(0f, 1f)
-                            }
-                        }
-                    }
-
-                    ActionType.PRESS -> {
-                        val target = action.target.replace("#", "").lowercase()
-                        val targetId = target.toIntOrNull()
-
-                        // Find the FIRST layer that matches this ID or Filename
-                        val targetLayer = currentDoll?.layers?.find { layer ->
-                            val layerName =
-                                layer.descriptor.fileName.lowercase().substringBefore(".")
-                            if (targetId != null) {
-                                layer.descriptor.objectId == targetId
-                            } else {
-                                layerName == target
-                            }
-                        }
-                        // Now pass the LAYER, not the ID
-                        targetLayer?.let { executePressActions(it) }
-                    }
-
-
-                    ActionType.RELEASE -> {
-                        val target = action.target.replace("#", "").lowercase()
-                        val targetId = target.toIntOrNull()
-                        val targetLayer = currentDoll?.layers?.find { layer ->
-                            val layerName =
-                                layer.descriptor.fileName.lowercase().substringBefore(".")
-                            if (targetId != null) {
-                                layer.descriptor.objectId == targetId
-                            } else {
-                                layerName == target
-                            }
-                        }
-                        targetLayer?.let { executeReleaseActions(it) }
-                    }
-
-                    ActionType.CATCH -> {
-                        val target = action.target.replace("#", "").lowercase()
-                        val targetId = target.toIntOrNull()
-
-                        val targetLayer = currentDoll?.layers?.find { layer ->
-                            val layerName =
-                                layer.descriptor.fileName.lowercase().substringBefore(".")
-                            if (targetId != null) {
-                                layer.descriptor.objectId == targetId
-                            } else {
-                                layerName == target
-                            }
-                        }
-                        val isGroupFixed = currentDoll?.layers?.any {
-                            targetLayer?.descriptor?.objectId == targetId && targetLayer?.descriptor?.isFixed == true
-                        }
-
-                        if (isGroupFixed == false) {
-                            targetLayer?.let { executePressActions(it) }
-                        }
-                    }
-
-                    ActionType.DROP -> {
-                        val target = action.target.replace("#", "").lowercase()
-                        val targetId = target.toIntOrNull()
-                        val targetLayer = currentDoll?.layers?.find { layer ->
-                            val layerName =
-                                layer.descriptor.fileName.lowercase().substringBefore(".")
-                            if (targetId != null) {
-                                layer.descriptor.objectId == targetId
-                            } else {
-                                layerName == target
-                            }
-                        }
-                        val isGroupFixed = currentDoll?.layers?.any {
-                            targetLayer?.descriptor?.objectId == targetId && targetLayer?.descriptor?.isFixed == true
-                        }
-
-                        if (isGroupFixed == false) {
-                            targetLayer?.let { executeReleaseActions(it) }
-                        }
-                    }
-
-                    ActionType.FIXCATCH -> {
-                        val target = action.target.replace("#", "").lowercase()
-                        val targetId = target.toIntOrNull()
-
-                        val targetLayer = currentDoll?.layers?.find { layer ->
-                            val layerName =
-                                layer.descriptor.fileName.lowercase().substringBefore(".")
-                            if (targetId != null) {
-                                layer.descriptor.objectId == targetId
-                            } else {
-                                layerName == target
-                            }
-                        }
-                        val isGroupFixed = currentDoll?.layers?.any {
-                            targetLayer?.descriptor?.objectId == targetId && targetLayer?.descriptor?.isFixed == true
-                        }
-
-                        if (isGroupFixed == true) {
-                            targetLayer?.let { executePressActions(it) }
-                        }
-                    }
-
-                    ActionType.FIXDROP -> {
-                        val target = action.target.replace("#", "").lowercase()
-                        val targetId = target.toIntOrNull()
-                        val targetLayer = currentDoll?.layers?.find { layer ->
-                            val layerName =
-                                layer.descriptor.fileName.lowercase().substringBefore(".")
-                            if (targetId != null) {
-                                layer.descriptor.objectId == targetId
-                            } else {
-                                layerName == target
-                            }
-                        }
-                        val isGroupFixed = currentDoll?.layers?.any {
-                            targetLayer?.descriptor?.objectId == targetId && targetLayer?.descriptor?.isFixed == true
-                        }
-
-                        if (isGroupFixed == true) {
-                            targetLayer?.let { executeReleaseActions(it) }
-                        }
-                    }
-
-                    ActionType.SOUND -> {
-                        val target = action.target.replace("\"", "").lowercase()
-                        soundManager.play(target, false)
-                    }
-
-                    ActionType.MUSIC -> {
-                        val doll = currentDoll ?: return@forEach
-
-                        val rawTarget = action.target
-
-                        val cleanTarget =
-                            rawTarget.replace("\"", "").replace("null", "").trim().lowercase()
-
-                        if (cleanTarget.isNotEmpty()) {
-                            soundManager.handleMusicAction(cleanTarget, doll.allFiles)
-                        } else {
-                            soundManager.stopMusic()
-                        }
-                    }
-
-                    ActionType.NOTIFY -> {
-                        val target = action.target.trim()
-                            .removePrefix("(").removeSuffix(")") // Strip parentheses if they exist
-                            .trim()
-                            .removeSurrounding("\"")
-                            .removeSurrounding("'")
-
-                        showNotify(target)
-                    }
-
-                    ActionType.CHANGESET -> changeSet(action.target.toIntOrNull() ?: 0)
-                    ActionType.UNFIX -> {
-                        // Target is a string
-                        val target = action.target.replace("#", "").lowercase()
-                        val targetId = target.toIntOrNull()
-
-                        // Find the actual layer for the target so we don't get a type mismatch
-                        val targetLayer = currentDoll?.layers?.find { layer ->
-                            val layerName =
-                                layer.descriptor.fileName.lowercase().substringBefore(".")
-                            if (targetId != null && !target.contains(".")) {
-                                layer.descriptor.objectId == targetId
-                            } else {
-                                layerName == target
-                            }
-                        }
-
-                        if (targetLayer != null) targetLayer.descriptor.isFixed = false
-                    }
-
-                    ActionType.QUIT -> {
-                        val state = uiState
-                        if (state is KissUiState.Loaded) {
-                            uiState = KissUiState.Empty
-                        }
-                    }
-
-                    else -> {}
-                }
-            } catch (e: Exception) {
-                uiState = KissUiState.Error(e.message ?: e.toString())
-                e.printStackTrace()
-            }
-
-        }
+        actions.forEach { action -> performAction(action) }
 
         if (eventId != -1) {
             configParser.snapRules.forEach { rule ->
-                // If the object involved in this event is the trigger, apply the snap
-                if (rule.triggerObj == eventId) {
-                    applySnap(rule)
-                }
+                if (rule.triggerObj == eventId) applySnap(rule)
             }
         }
         refreshTrigger++
+    }
+
+    /**
+     * Consolidated action executor.
+     */
+    private fun performAction(action: KissAction) {
+        try {
+            when (action.type) {
+                ActionType.UNMAP -> setMappingStrict(action.target, true)
+                ActionType.MAP -> setMappingStrict(action.target, false)
+                ActionType.ALTMAP -> altMappingStrict(action.target)
+                ActionType.TIMER -> fireTimer(action)
+                ActionType.RANDOM_TIMER -> fireRandomTimer(action)
+                ActionType.PRESS -> {
+                    val target = action.target.replace("#", "").lowercase()
+                    val targetId = target.toIntOrNull()
+                    val targetLayer = currentDoll?.layers?.find { layer ->
+                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
+                        if (targetId != null) layer.descriptor.objectId == targetId else layerName == target
+                    }
+                    targetLayer?.let { executePressActions(it) }
+                }
+
+                ActionType.RELEASE -> {
+                    val target = action.target.replace("#", "").lowercase()
+                    val targetId = target.toIntOrNull()
+                    val targetLayer = currentDoll?.layers?.find { layer ->
+                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
+                        if (targetId != null) layer.descriptor.objectId == targetId else layerName == target
+                    }
+                    targetLayer?.let { executeReleaseActions(it) }
+                }
+                ActionType.ALARM -> {
+                    val id = action.target.trim().toIntOrNull() ?: return
+                    synchronized(immediateQueue) {
+                        immediateQueue.add(id)
+                    }
+                }
+                ActionType.CHANGESET -> changeSet(action.target.toIntOrNull() ?: 0)
+
+                ActionType.SOUND -> {
+                    val target = action.target.replace("\"", "").lowercase()
+                    soundManager.play(target, false)
+                }
+
+                ActionType.MUSIC -> {
+                    val doll = currentDoll ?: return
+                    val cleanTarget =
+                        action.target.replace("\"", "").replace("null", "").trim().lowercase()
+                    if (cleanTarget.isNotEmpty()) {
+                        soundManager.handleMusicAction(cleanTarget, doll.allFiles)
+                    } else {
+                        soundManager.stopMusic()
+                    }
+                }
+
+                ActionType.NOTIFY -> {
+                    val target = action.target.trim()
+                        .removePrefix("(").removeSuffix(")")
+                        .trim()
+                        .removeSurrounding("\"")
+                        .removeSurrounding("'")
+                    showNotify(target)
+                }
+
+                ActionType.MOVETO -> {
+                    val targetId = action.target.replace("#", "").toIntOrNull() ?: return
+                    val coords = action.valueStr.split(",")
+                    if (coords.size >= 2) {
+                        val tx = coords[0].trim().toIntOrNull() ?: 0
+                        val ty = coords[1].trim().toIntOrNull() ?: 0
+                        val layer = currentDoll?.layers?.find { it.descriptor.objectId == targetId }
+                        if (layer != null) {
+                            val finalX = tx - layer.x
+                            val finalY = ty - layer.y
+                            currentOffsets[targetId] = Offset(finalX.toFloat(), finalY.toFloat())
+                        }
+                    }
+                }
+
+                ActionType.MOVE -> moveRelativeFromSelf(action)
+                ActionType.MOVEBYX, ActionType.MOVEBYY -> moveRelative(action)
+
+                ActionType.UNFIX -> {
+                    val target = action.target.replace("#", "").lowercase()
+                    val targetId = target.toIntOrNull()
+                    val targetLayer = currentDoll?.layers?.find { layer ->
+                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
+                        if (targetId != null && !target.contains(".")) {
+                            layer.descriptor.objectId == targetId
+                        } else {
+                            layerName == target
+                        }
+                    }
+                    if (targetLayer != null || (targetId != null && targetId == 0)) targetLayer?.descriptor?.isFixed = false
+                }
+
+                ActionType.SETFIX -> {
+                    val target = action.target.replace("#", "").lowercase()
+                    val targetId = target.toIntOrNull()
+                    val targetLayer = currentDoll?.layers?.find { layer ->
+                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
+                        if (targetId != null && !target.contains(".")) {
+                            layer.descriptor.objectId == targetId
+                        } else {
+                            layerName == target
+                        }
+                    }
+                    val value = action.valueStr.toIntOrNull()
+
+                    if (targetLayer != null && value != null) {
+                        targetLayer.descriptor.isFixed = value > 0
+                    }
+                }
+
+                ActionType.GOSUB -> {
+                    val target = action.target
+                    executeLabelActions(target)
+                }
+
+                ActionType.QUIT -> {
+                    if (uiState is KissUiState.Loaded) {
+                        uiState = KissUiState.Empty
+                    }
+                }
+                else -> {}
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun isPixelCollisionWithOffset(
@@ -1017,86 +904,20 @@ class ViewModel(application: Application) :
 
     /** Events to trigger upon switching sets. This can be archieved either through pressing the set buttons at the top, or though `changeset()` FKiSS events. */
     fun executeSetActions(setNumStr: String) {
-        val actions = configParser.setActions[setNumStr] ?: emptyList()
-
-        actions.forEach { action ->
-            when (action.type) {
-                ActionType.UNMAP -> setMappingStrict(action.target, true)
-                ActionType.MAP -> setMappingStrict(action.target, false)
-                ActionType.ALTMAP -> altMappingStrict(action.target)
-                ActionType.TIMER -> fireTimer(action)
-                ActionType.RANDOM_TIMER -> fireRandomTimer(action)
-                ActionType.TRANSPARENT -> {
-                    val targetName = action.target.replace("\"", "").trim().lowercase()
-                    val valueStr = action.valueStr.trim().replace("\"", "")
-                    val amount = valueStr.toFloatOrNull() ?: 0f
-
-                    // If it doesn't look like an absolute reset (like 0 or 255),
-                    // try treating it as a relative step.
-                    // Or more simply: just treat everything in this doll as relative.
-                    currentDoll?.layers?.forEach { layer ->
-                        if (layer.descriptor.fileName.lowercase().startsWith(targetName)) {
-                            // Convert the KiSS 0-255 step to our 0.0-1.0 float step
-                            val delta = amount / 255f
-
-                            // Subtracting because KiSS 255 = Alpha 0 (Transparent)
-                            // So adding transparency means lowering the alpha.
-                            layer.alpha = (layer.alpha - delta).coerceIn(0f, 1f)
-                        }
-                    }
-                }
-
-                ActionType.CHANGESET -> changeSet(action.target.toInt())
-                ActionType.SOUND -> {
-                    val target = action.target.replace("\"", "").lowercase()
-                    soundManager.play(target, false)
-                }
-                ActionType.MUSIC -> {
-                    val doll = currentDoll ?: return@forEach
-
-                    // Your parser puts the filename in 'target' because it's the first parameter
-                    val rawTarget = action.target
-
-                    val cleanTarget =
-                        rawTarget.replace("\"", "").replace("null", "").trim().lowercase()
-
-                    if (cleanTarget.isNotEmpty()) {
-                        soundManager.handleMusicAction(cleanTarget, doll.allFiles)
-                    } else {
-                        soundManager.stopMusic()
-                    }
-                }
-
-                ActionType.NOTIFY -> {
-                    val target = action.target.trim().removeSurrounding("\"").removeSurrounding("'")
-
-                    showNotify(target)
-                }
-
-                ActionType.UNFIX -> {
-                    // Target is a string
-                    val target = action.target.replace("#", "").lowercase()
-                    val targetId = target.toIntOrNull()
-
-                    // Find the actual layer for the target so we don't get a type mismatch
-                    val targetLayer = currentDoll?.layers?.find { layer ->
-                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
-                        if (targetId != null && !target.contains(".")) {
-                            layer.descriptor.objectId == targetId
-                        } else {
-                            layerName == target
-                        }
-                    }
-
-                    // Recursively call with the found Layer
-                    if (targetLayer != null) targetLayer.descriptor.isFixed = false
-                }
-
-                else -> {}
-            }
+        val actions = configParser.setActions[setNumStr] ?: return
+        actions.forEach {
+            performAction(it)
         }
+        refreshTrigger++
     }
 
+    fun executeLabelActions(labelNumStr: String) {
+        val actions = configParser.labelActions[labelNumStr] ?: return
+        actions.forEach {action ->
+            performAction(action)
+        }
+        refreshTrigger++
+    }
 
     // Track which objects are currently being "forced" visible by a press
     val activePressIds = mutableStateListOf<Int>()
@@ -1107,137 +928,10 @@ class ViewModel(application: Application) :
     fun executePressActions(hitLayer: KissLayer) {
         val objIdStr = hitLayer.descriptor.objectId.toString()
         val fileName = hitLayer.descriptor.fileName.lowercase().substringBefore(".")
-
-        // Get actions for both the ID and Filename
-        val actionsById = configParser.pressActions[objIdStr] ?: emptyList()
-        val actionsByName = configParser.pressActions[fileName] ?: emptyList()
-        val allActions = (actionsById + actionsByName).distinct()
-        allActions.forEach { action ->
-            when (action.type) {
-                ActionType.UNMAP -> setMappingStrict(action.target, true)
-                ActionType.MAP -> setMappingStrict(action.target, false)
-                ActionType.ALTMAP -> altMappingStrict(action.target)
-                ActionType.TIMER -> fireTimer(action)
-                ActionType.RANDOM_TIMER -> fireRandomTimer(action)
-                ActionType.SOUND -> {
-                    val target = action.target.replace("\"", "").lowercase()
-                    soundManager.play(target, false)
-                }
-
-                ActionType.CHANGESET -> changeSet(action.target.toIntOrNull() ?: 0)
-                ActionType.MUSIC -> {
-                    val doll = currentDoll ?: return@forEach
-
-                    // Your parser puts the filename in 'target' because it's the first parameter
-                    val rawTarget = action.target
-
-                    val cleanTarget =
-                        rawTarget.replace("\"", "").replace("null", "").trim().lowercase()
-
-                    if (cleanTarget.isNotEmpty()) {
-                        soundManager.handleMusicAction(cleanTarget, doll.allFiles)
-                    } else {
-                        soundManager.stopMusic()
-                    }
-                }
-
-                ActionType.PRESS -> {
-                    // Target is a string
-                    val target = action.target.replace("#", "").lowercase()
-                    val targetId = target.toIntOrNull()
-
-                    // Find the actual layer for the target so we don't get a type mismatch
-                    val targetLayer = currentDoll?.layers?.find { layer ->
-                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
-                        if (targetId != null && !target.contains(".")) {
-                            layer.descriptor.objectId == targetId
-                        } else {
-                            layerName == target
-                        }
-                    }
-
-                    // Recursively call with the found Layer
-                    targetLayer?.let {
-                        executePressActions(it)
-                    }
-                }
-
-                ActionType.CATCH -> {
-                    val target = action.target.replace("#", "").lowercase()
-                    val targetId = target.toIntOrNull()
-
-                    // Find the actual layer for the target so we don't get a type mismatch
-                    val targetLayer = currentDoll?.layers?.find { layer ->
-                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
-                        if (targetId != null && !target.contains(".")) {
-                            layer.descriptor.objectId == targetId
-                        } else {
-                            layerName == target
-                        }
-                    }
-                    val isGroupFixed = currentDoll?.layers?.any {
-                        targetLayer?.descriptor?.objectId == targetId && targetLayer?.descriptor?.isFixed == true
-                    }
-                    // Recursively call with the found Layer
-                    if (isGroupFixed == false) {
-                        targetLayer?.let { executePressActions(it) }
-                    }
-                }
-
-                ActionType.FIXCATCH -> {
-                    val target = action.target.replace("#", "").lowercase()
-                    val targetId = target.toIntOrNull()
-
-                    // Find the actual layer for the target so we don't get a type mismatch
-                    val targetLayer = currentDoll?.layers?.find { layer ->
-                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
-                        if (targetId != null && !target.contains(".")) {
-                            layer.descriptor.objectId == targetId
-                        } else {
-                            layerName == target
-                        }
-                    }
-                    val isGroupFixed = currentDoll?.layers?.any {
-                        targetLayer?.descriptor?.objectId == targetId && targetLayer?.descriptor?.isFixed == true
-                    }
-                    // Recursively call with the found Layer
-                    if (isGroupFixed == true) {
-                        targetLayer?.let { executePressActions(it) }
-                    }
-                }
-
-                ActionType.UNFIX -> {
-                    // Target is a string
-                    val target = action.target.replace("#", "").lowercase()
-                    val targetId = target.toIntOrNull()
-
-                    // Find the actual layer for the target so we don't get a type mismatch
-                    val targetLayer = currentDoll?.layers?.find { layer ->
-                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
-                        if (targetId != null && !target.contains(".")) {
-                            layer.descriptor.objectId == targetId
-                        } else {
-                            layerName == target
-                        }
-                    }
-                    if (targetLayer != null) targetLayer.descriptor.isFixed = false
-                }
-
-                ActionType.NOTIFY -> {
-                    val target = action.target.trim().removeSurrounding("\"").removeSurrounding("'")
-                    showNotify(target)
-                }
-
-
-                ActionType.QUIT -> {
-                    val state = uiState
-                    if (state is KissUiState.Loaded) {
-                        uiState = KissUiState.Empty
-                    }
-                }
-
-                else -> {}
-            }
+        val actions = (configParser.pressActions[objIdStr] ?: emptyList()) +
+                (configParser.pressActions[fileName] ?: emptyList())
+        actions.distinct().forEach {
+            performAction(it)
         }
         refreshTrigger++
     }
@@ -1279,116 +973,10 @@ class ViewModel(application: Application) :
     fun executeReleaseActions(hitLayer: KissLayer) {
         val objIdStr = hitLayer.descriptor.objectId.toString()
         val fileName = hitLayer.descriptor.fileName.lowercase().substringBefore(".")
-
-        // Get actions for both the ID (#10) and Filename (artemis)
         val actions = (configParser.releaseActions[objIdStr] ?: emptyList()) +
                 (configParser.releaseActions[fileName] ?: emptyList())
 
-        actions.distinct().forEach { action ->
-            when (action.type) {
-                ActionType.UNMAP -> setMappingStrict(action.target, true)
-                ActionType.MAP -> setMappingStrict(action.target, false)
-                ActionType.ALTMAP -> altMappingStrict(action.target)
-                ActionType.TIMER -> fireTimer(action)
-                ActionType.RANDOM_TIMER -> fireRandomTimer(action)
-                ActionType.CHANGESET -> changeSet(action.target.toIntOrNull() ?: 0)
-                ActionType.RELEASE -> triggerReleaseByName(action.target)
-                ActionType.DROP -> {
-                    val targetId = action.target.toIntOrNull()
-                    val targetLayer = currentDoll?.layers?.find { layer ->
-                        val layerName =
-                            layer.descriptor.fileName.lowercase().substringBefore(".")
-                        if (targetId != null) {
-                            layer.descriptor.objectId == targetId
-                        } else {
-                            layerName == action.target
-                        }
-                    }
-                    val isGroupFixed = currentDoll?.layers?.any {
-                        targetLayer?.descriptor?.objectId == targetId && targetLayer?.descriptor?.isFixed == true
-                    }
-
-                    if (isGroupFixed == false) {
-                        targetLayer?.let { triggerReleaseByName(action.target) }
-                    }
-                }
-
-                ActionType.FIXDROP -> {
-                    val targetId = action.target.toIntOrNull()
-                    val targetLayer = currentDoll?.layers?.find { layer ->
-                        val layerName =
-                            layer.descriptor.fileName.lowercase().substringBefore(".")
-                        if (targetId != null) {
-                            layer.descriptor.objectId == targetId
-                        } else {
-                            layerName == action.target
-                        }
-                    }
-                    val isGroupFixed = currentDoll?.layers?.any {
-                        targetLayer?.descriptor?.objectId == targetId && targetLayer?.descriptor?.isFixed == true
-                    }
-
-                    if (isGroupFixed == true) {
-                        targetLayer?.let { triggerReleaseByName(action.target) }
-                    }
-                }
-
-                ActionType.SOUND -> {
-                    val target = action.target.replace("\"", "").lowercase()
-                    soundManager.play(target, false)
-                }
-
-                ActionType.MUSIC -> {
-                    val doll = currentDoll ?: return@forEach
-
-                    // Your parser puts the filename in 'target' because it's the first parameter
-                    val rawTarget = action.target
-
-                    val cleanTarget =
-                        rawTarget.replace("\"", "").replace("null", "").trim().lowercase()
-
-                    if (cleanTarget.isNotEmpty()) {
-                        soundManager.handleMusicAction(cleanTarget, doll.allFiles)
-                    } else {
-                        soundManager.stopMusic()
-                    }
-                }
-
-                ActionType.NOTIFY -> {
-                    val target = action.target.trim().removeSurrounding("\"").removeSurrounding("'")
-                    showNotify(target)
-                }
-
-                ActionType.UNFIX -> {
-                    // Target is a string
-                    val target = action.target.replace("#", "").lowercase()
-                    val targetId = target.toIntOrNull()
-
-                    // Find the actual layer for the target so we don't get a type mismatch
-                    val targetLayer = currentDoll?.layers?.find { layer ->
-                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
-                        if (targetId != null && !target.contains(".")) {
-                            layer.descriptor.objectId == targetId
-                        } else {
-                            layerName == target
-                        }
-                    }
-
-                    // Recursively call with the found Layer
-                    if (targetLayer != null) targetLayer.descriptor.isFixed = false
-                }
-
-                ActionType.QUIT -> {
-                    val state = uiState
-                    if (state is KissUiState.Loaded) {
-                        uiState = KissUiState.Empty
-                    }
-                }
-
-                else -> {/* Add more if necessary (TODO) */
-                }
-            }
-        }
+        actions.distinct().forEach { performAction(it) }
         refreshTrigger++
     }
 
@@ -1474,55 +1062,22 @@ class ViewModel(application: Application) :
     }
 
     fun executeUnfixActions(hitLayer: KissLayer) {
-        hitLayer.descriptor.isFixed = false
         val objIdStr = hitLayer.descriptor.objectId.toString()
         val fileName = hitLayer.descriptor.fileName.lowercase().substringBefore(".")
+        val actions = (configParser.unfixActions[objIdStr] ?: emptyList()) +
+                (configParser.unfixActions[fileName] ?: emptyList())
 
-        // Get actions for both the ID and Filename
-        val actionsById = configParser.unfixActions[objIdStr] ?: emptyList()
-        val actionsByName = configParser.unfixActions[fileName] ?: emptyList()
-        val allActions = (actionsById + actionsByName).distinct()
+        actions.distinct().forEach { performAction(it) }
+        refreshTrigger++
+    }
 
-        // any debugging action i put here at the top does trigger, but nothin in the allActions loop does. i don't know why
-        allActions.forEach { action ->
-            when (action.type) {
-                ActionType.UNMAP -> setMappingStrict(action.target, true)
-                ActionType.MAP -> setMappingStrict(action.target, false)
-                ActionType.ALTMAP -> altMappingStrict(action.target)
-                ActionType.TIMER -> fireTimer(action)
-                ActionType.RANDOM_TIMER -> fireRandomTimer(action)
-                ActionType.CHANGESET -> changeSet(action.target.toIntOrNull() ?: 0)
-                ActionType.SOUND -> {
-                    val target = action.target.replace("\"", "").lowercase()
-                    soundManager.play(target, false)
-                }
-                ActionType.MUSIC -> {
-                    val doll = currentDoll ?: return@forEach
-                    val rawTarget = action.target
-                    val cleanTarget =
-                        rawTarget.replace("\"", "").replace("null", "").trim().lowercase()
-                    if (cleanTarget.isNotEmpty()) {
-                        soundManager.handleMusicAction(cleanTarget, doll.allFiles)
-                    } else {
-                        soundManager.stopMusic()
-                    }
-                }
+    fun executeSetFixActions(hitLayer: KissLayer) {
+        val objIdStr = hitLayer.descriptor.objectId.toString()
+        val fileName = hitLayer.descriptor.fileName.lowercase().substringBefore(".")
+        val actions = (configParser.setFixActions[objIdStr] ?: emptyList()) +
+                (configParser.setFixActions[fileName] ?: emptyList())
 
-                ActionType.NOTIFY -> {
-                    val target = action.target.trim().removeSurrounding("\"").removeSurrounding("'")
-                    showNotify(target)
-                }
-
-                ActionType.QUIT -> {
-                    val state = uiState
-                    if (state is KissUiState.Loaded) {
-                        uiState = KissUiState.Empty
-                    }
-                }
-
-                else -> {}
-            }
-        }
+        actions.distinct().forEach { performAction(it) }
         refreshTrigger++
     }
 
