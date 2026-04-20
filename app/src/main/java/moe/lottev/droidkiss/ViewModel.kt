@@ -380,7 +380,6 @@ class ViewModel(application: Application) :
             }
         }
         executeSetActions(newSet.toString())
-        currentOffsets.clear()
         // This forces the Compose UI to redraw with the new coordinate/offset context
         refreshTrigger++
     }
