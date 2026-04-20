@@ -767,15 +767,22 @@ class ViewModel(application: Application) :
                     val target = action.target.replace("#", "").lowercase()
                     val targetId = target.toIntOrNull()
                     val value = action.valueStr.toIntOrNull() ?: 0
-                    val targetLayer = currentDoll?.layers?.find { layer ->
+                    val shouldGhost = value > 0
+
+                    // Loop through ALL layers to catch every cel in the group
+                    currentDoll?.layers?.forEach { layer ->
                         val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
-                        if (targetId != null && !target.contains(".")) {
+
+                        val isMatch = if (targetId != null && !target.contains(".")) {
                             layer.descriptor.objectId == targetId
                         } else {
                             layerName == target
                         }
+
+                        if (isMatch) {
+                            layer.descriptor.isGhosted = shouldGhost
+                        }
                     }
-                    if ((targetLayer != null || (targetId != null)) && value > 0) targetLayer?.descriptor?.isGhosted = true
                     return true
                 }
                 ActionType.NOP -> return true
@@ -790,6 +797,12 @@ class ViewModel(application: Application) :
             e.printStackTrace()
         }
         return true
+    }
+
+    fun setGhost(id: Int, value: Boolean) {
+        currentDoll?.layers?.filter { it.descriptor.objectId == id }?.forEach {
+            it.descriptor.isGhosted = value
+        }
     }
 
     fun isPixelCollisionWithOffset(

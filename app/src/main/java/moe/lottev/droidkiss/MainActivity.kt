@@ -612,16 +612,13 @@ fun DollCanvas(doll: KissDoll, viewModel: ViewModel, graphicsLayer: GraphicsLaye
             ) { // Keys ensure it resets when set changes
                 detectDragGestures (
                     onDragStart = { offset ->
-                        val isGroupGhosted = doll.layers.any {
-                            it.descriptor.objectId == activeDraggingId && it.descriptor.isGhosted
-                        }
-                        if (isGroupGhosted) return@detectDragGestures
 
                         val tapX = offset.x / scale
                         val tapY = offset.y / scale
 
                         val hitLayer = doll.layers.asReversed().find { layer ->
                             if (!viewModel.isLayerVisible(layer)) return@find false
+                            if (layer.descriptor.isGhosted) return@find false
                             val drag =
                                 viewModel.currentOffsets[layer.descriptor.objectId] ?: Offset.Zero
                             val localX = (tapX - (layer.x + drag.x)).toInt()
@@ -656,11 +653,6 @@ fun DollCanvas(doll: KissDoll, viewModel: ViewModel, graphicsLayer: GraphicsLaye
                                 it.descriptor.objectId == id && it.descriptor.isFixed
                             }
                             if (isGroupFixed) return@detectDragGestures
-
-                            val isGroupGhosted = doll.layers.any {
-                                it.descriptor.objectId == id && it.descriptor.isGhosted
-                            }
-                            if (isGroupGhosted) return@detectDragGestures
 
                             objectLayers.forEach { objectLayer ->
                                 // Define the 'Walls'
@@ -713,17 +705,13 @@ fun DollCanvas(doll: KissDoll, viewModel: ViewModel, graphicsLayer: GraphicsLaye
                 .pointerInput(scale, viewModel.activeSet) {
                     awaitPointerEventScope {
                         while (true) {
-                            val isGroupGhosted = doll.layers.any {
-                                it.descriptor.objectId == activeDraggingId && it.descriptor.isGhosted
-                            }
-                            if (isGroupGhosted) return@awaitPointerEventScope
-
                             val down = awaitFirstDown()
                             val tapX = down.position.x / scale
                             val tapY = down.position.y / scale
 
                             val hitLayer = doll.layers.asReversed().find { layer ->
                                 if (!viewModel.isLayerVisible(layer)) return@find false
+                                if (layer.descriptor.isGhosted) return@find false
                                 val drag = viewModel.currentOffsets[layer.descriptor.objectId]
                                     ?: Offset.Zero
                                 val localX = (tapX - (layer.x + drag.x)).toInt()
