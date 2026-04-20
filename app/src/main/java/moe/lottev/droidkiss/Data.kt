@@ -57,6 +57,7 @@ data class KissLayerDescriptor(
 ) {
     var isUnmapped by mutableStateOf(initialUnmapped)
     var isFixed by mutableStateOf(isInitiallyFixed)
+    var isGhosted by mutableStateOf(false)
 }
 
 data class DecodeResult(
@@ -104,6 +105,7 @@ data class SnapRule(
     val yValue: Int,
     val isRelative: Boolean,
     val isRelativeFromSelf: Boolean,
+    val disabled: Boolean
 )
 
 /** Represents individual CEL files. */
@@ -174,5 +176,5 @@ data class KissAction(
 /** FKiSS action type list. TODO: Implement currently unused actions. */
 @Suppress("unused")
 enum class ActionType {
-    COL, CHANGECOL, UNFIX, SETFIX, TRANSPARENT, MAP, UNMAP, ALTMAP, TIMER, ALARM, MOVE, MOVEBYX, MOVEBYY, MOVETO, RANDOM_TIMER, PRESS, RELEASE, CATCH, DROP, FIXCATCH, FIXDROP, SET, CHANGESET, IN, OUT, COLLIDE, APART, SOUND, MUSIC, NOTIFY, DETACHED, KEY, MOUSEIN, MOUSEOUT, STILLIN, STILLOUT, ADD, ATTACH, DETACH, IF, ELSE, ENDIF, GHOST, EXITEVENT, EXITLOOP, GLUE, GOSUB, GOSUBRANDOM, GOTO, GOTOBRANDOM, LABEL, NOP, VIEWPORT, DEBUG, QUIT, END;
+    COL, CHANGECOL, UNFIX, SETFIX, TRANSPARENT, MAP, UNMAP, ALTMAP, TIMER, ALARM, MOVE, MOVEBYX, MOVEBYY, MOVETO, RANDOM_TIMER, PRESS, RELEASE, CATCH, DROP, FIXCATCH, FIXDROP, SET, CHANGESET, IN, OUT, COLLIDE, APART, SOUND, MUSIC, NOTIFY, DETACHED, KEY, MOUSEIN, MOUSEOUT, STILLIN, STILLOUT, ADD, ATTACH, DETACH, IF, ELSE, ENDIF, GHOST, EXITEVENT, EXITLOOP, GLUE, GOSUB, GOSUBRANDOM, GOTO, GOTORANDOM, LABEL, NOP, VIEWPORT, DEBUG, QUIT, END;
 }

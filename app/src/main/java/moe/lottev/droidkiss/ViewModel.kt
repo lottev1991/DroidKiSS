@@ -435,6 +435,7 @@ class ViewModel(application: Application) :
             val snapLayer =
                 doll.layers.find { it.descriptor.objectId == rule.snapObj } ?: return@forEach
 
+            if (snapLayer.descriptor.isUnmapped) return@forEach
 
             val layers = doll.layers
 
@@ -442,6 +443,8 @@ class ViewModel(application: Application) :
                 val anchorLayer = doll.layers.find { it.descriptor.objectId == rule.triggerObj }
                     ?: return@forEach
                 val anchorOffset = currentOffsets[rule.triggerObj] ?: Offset.Zero
+
+                if (anchorLayer.descriptor.isUnmapped) return@forEach
 
                 // Find the Anchor's VISUAL origin (Top-left of pixels)
                 val anchorVisualX =
@@ -480,6 +483,8 @@ class ViewModel(application: Application) :
                     ?: return@forEach
                 val targetOffset = currentOffsets[rule.snapObj] ?: Offset.Zero
 
+                if (targetLayer.descriptor.isUnmapped) return@forEach
+
                 // Find the Anchor's VISUAL origin (Top-left of pixels)
                 val targetVisualX =
                     targetLayer.x - targetLayer.descriptor.celOffsetX + targetOffset.x
@@ -509,12 +514,12 @@ class ViewModel(application: Application) :
 
                     currentOffsets[rule.snapObj] = Offset(finalX, finalY)
                 }
-
-
             } else {
                 val anchorLayer = doll.layers.find { it.descriptor.objectId == rule.triggerObj }
                     ?: return@forEach
                 val anchorOffset = currentOffsets[rule.triggerObj] ?: Offset.Zero
+
+                if (anchorLayer.descriptor.isUnmapped) return@forEach
 
                 // Find the Anchor's VISUAL origin (Top-left of pixels)
                 val anchorVisualX =
@@ -564,6 +569,8 @@ class ViewModel(application: Application) :
 
         if (eventId != -1) {
             configParser.snapRules.forEach { rule ->
+                if (rule.disabled) return@forEach
+
                 if (rule.triggerObj == eventId) applySnap(rule)
             }
         }
@@ -573,14 +580,29 @@ class ViewModel(application: Application) :
     /**
      * Consolidated action executor.
      */
-    private fun performAction(action: KissAction) {
+    private fun performAction(action: KissAction): Boolean {
         try {
             when (action.type) {
-                ActionType.UNMAP -> setMappingStrict(action.target, true)
-                ActionType.MAP -> setMappingStrict(action.target, false)
-                ActionType.ALTMAP -> altMappingStrict(action.target)
-                ActionType.TIMER -> fireTimer(action)
-                ActionType.RANDOM_TIMER -> fireRandomTimer(action)
+                ActionType.UNMAP -> {
+                    setMappingStrict(action.target, true)
+                    return true
+                }
+                ActionType.MAP -> {
+                    setMappingStrict(action.target, false)
+                    return true
+                }
+                ActionType.ALTMAP -> {
+                    altMappingStrict(action.target)
+                    return true
+                }
+                ActionType.TIMER -> {
+                    fireTimer(action)
+                    return true
+                }
+                ActionType.RANDOM_TIMER -> {
+                    fireRandomTimer(action)
+                    return true
+                }
                 ActionType.PRESS -> {
                     val target = action.target.replace("#", "").lowercase()
                     val targetId = target.toIntOrNull()
@@ -589,6 +611,7 @@ class ViewModel(application: Application) :
                         if (targetId != null) layer.descriptor.objectId == targetId else layerName == target
                     }
                     targetLayer?.let { executePressActions(it) }
+                    return true
                 }
 
                 ActionType.RELEASE -> {
@@ -599,22 +622,28 @@ class ViewModel(application: Application) :
                         if (targetId != null) layer.descriptor.objectId == targetId else layerName == target
                     }
                     targetLayer?.let { executeReleaseActions(it) }
+                    return true
                 }
                 ActionType.ALARM -> {
-                    val id = action.target.trim().toIntOrNull() ?: return
+                    val id = action.target.trim().toIntOrNull() ?: return true
                     synchronized(immediateQueue) {
                         immediateQueue.add(id)
                     }
+                    return true
                 }
-                ActionType.CHANGESET -> changeSet(action.target.toIntOrNull() ?: 0)
+                ActionType.CHANGESET -> {
+                    changeSet(action.target.toIntOrNull() ?: 0)
+                    return true
+                }
 
                 ActionType.SOUND -> {
                     val target = action.target.replace("\"", "").lowercase()
                     soundManager.play(target, false)
+                    return true
                 }
 
                 ActionType.MUSIC -> {
-                    val doll = currentDoll ?: return
+                    val doll = currentDoll ?: return true
                     val cleanTarget =
                         action.target.replace("\"", "").replace("null", "").trim().lowercase()
                     if (cleanTarget.isNotEmpty()) {
@@ -622,6 +651,7 @@ class ViewModel(application: Application) :
                     } else {
                         soundManager.stopMusic()
                     }
+                    return true
                 }
 
                 ActionType.NOTIFY -> {
@@ -631,10 +661,11 @@ class ViewModel(application: Application) :
                         .removeSurrounding("\"")
                         .removeSurrounding("'")
                     showNotify(target)
+                    return true
                 }
 
                 ActionType.MOVETO -> {
-                    val targetId = action.target.replace("#", "").toIntOrNull() ?: return
+                    val targetId = action.target.replace("#", "").toIntOrNull() ?: return true
                     val coords = action.valueStr.split(",")
                     if (coords.size >= 2) {
                         val tx = coords[0].trim().toIntOrNull() ?: 0
@@ -646,10 +677,17 @@ class ViewModel(application: Application) :
                             currentOffsets[targetId] = Offset(finalX.toFloat(), finalY.toFloat())
                         }
                     }
+                    return true
                 }
 
-                ActionType.MOVE -> moveRelativeFromSelf(action)
-                ActionType.MOVEBYX, ActionType.MOVEBYY -> moveRelative(action)
+                ActionType.MOVE -> {
+                    moveRelativeFromSelf(action)
+                    return true
+                }
+                ActionType.MOVEBYX, ActionType.MOVEBYY -> {
+                    moveRelative(action)
+                    return true
+                }
 
                 ActionType.UNFIX -> {
                     val target = action.target.replace("#", "").lowercase()
@@ -663,6 +701,7 @@ class ViewModel(application: Application) :
                         }
                     }
                     if (targetLayer != null || (targetId != null && targetId == 0)) targetLayer?.descriptor?.isFixed = false
+                    return true
                 }
 
                 ActionType.SETFIX -> {
@@ -681,23 +720,76 @@ class ViewModel(application: Application) :
                     if (targetLayer != null && value != null) {
                         targetLayer.descriptor.isFixed = value > 0
                     }
+                    return true
                 }
 
                 ActionType.GOSUB -> {
                     val target = action.target
                     executeLabelActions(target)
+                    return true
                 }
 
+                ActionType.GOTO -> {
+                    val target = action.target
+                    executeLabelActions(target)
+                    return false
+                }
+
+                ActionType.GOSUBRANDOM -> {
+                    // target usually looks like "30, 100, 200"
+                    val p1 = action.target.toIntOrNull() ?: 50
+                    val p2 = action.valueStr.trim()
+                    val p3 = action.extraValue.trim()
+
+                    val roll = (1..100).random()
+                    val finalTarget = if (roll <= p1) p2 else p3
+
+                    if (finalTarget.isNotEmpty()) {
+                        executeLabelActions(finalTarget)
+                    }
+                    return true // Gosub returns to caller
+                }
+
+                ActionType.GOTORANDOM -> {
+                    val p1 = action.target.toIntOrNull() ?: 50
+                    val p2 = action.valueStr.trim()
+                    val p3 = action.extraValue.trim()
+
+                    val roll = (1..100).random()
+                    val finalTarget = if (roll <= p1) p2 else p3
+
+                    if (finalTarget.isNotEmpty()) {
+                        executeLabelActions(finalTarget)
+                    }
+                    return false // Goto terminates current handler
+                }
+                ActionType.GHOST -> {
+                    val target = action.target.replace("#", "").lowercase()
+                    val targetId = target.toIntOrNull()
+                    val value = action.valueStr.toIntOrNull() ?: 0
+                    val targetLayer = currentDoll?.layers?.find { layer ->
+                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
+                        if (targetId != null && !target.contains(".")) {
+                            layer.descriptor.objectId == targetId
+                        } else {
+                            layerName == target
+                        }
+                    }
+                    if ((targetLayer != null || (targetId != null)) && value > 0) targetLayer?.descriptor?.isGhosted = true
+                    return true
+                }
+                ActionType.NOP -> return true
                 ActionType.QUIT -> {
                     if (uiState is KissUiState.Loaded) {
                         uiState = KissUiState.Empty
                     }
                 }
-                else -> {}
+                else -> return true
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
+        return true
     }
 
     fun isPixelCollisionWithOffset(
@@ -913,8 +1005,13 @@ class ViewModel(application: Application) :
 
     fun executeLabelActions(labelNumStr: String) {
         val actions = configParser.labelActions[labelNumStr] ?: return
-        actions.forEach {action ->
-            performAction(action)
+
+        for (action in actions) {
+            val continueProcessing = performAction(action)
+
+            if (!continueProcessing) {
+                break // Exit this loop immediately
+            }
         }
         refreshTrigger++
     }

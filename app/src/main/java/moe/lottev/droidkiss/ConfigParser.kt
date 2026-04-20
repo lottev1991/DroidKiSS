@@ -105,6 +105,9 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 "notify",
                 "set",
                 "gosub",
+                "gosubrandom",
+                "goto",
+                "gotorandom",
                 "debug",
                 "version",
                 "ghost",
@@ -219,7 +222,11 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                         "setfix" -> ActionType.SETFIX
                         "unfix" -> ActionType.UNFIX
                         "gosub" -> ActionType.GOSUB
+                        "goto" -> ActionType.GOTO
+                        "gosubrandom" -> ActionType.GOSUBRANDOM
+                        "gotorandom" -> ActionType.GOTORANDOM
                         "label" -> ActionType.LABEL
+                        "ghost" -> ActionType.GHOST
                         "nop" -> ActionType.NOP
                         else -> null
                     }
@@ -299,7 +306,11 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                         "setfix" -> ActionType.SETFIX
                         "unfix" -> ActionType.UNFIX
                         "gosub" -> ActionType.GOSUB
+                        "goto" -> ActionType.GOTO
+                        "gosubrandom" -> ActionType.GOSUBRANDOM
+                        "gotorandom" -> ActionType.GOTORANDOM
                         "label" -> ActionType.LABEL
+                        "ghost" -> ActionType.GHOST
                         "nop" -> ActionType.NOP
                         else -> null
                     }
@@ -531,7 +542,8 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                     xValue = x ?: 0,
                     yValue = y ?: 0,
                     isRelative = true,
-                    isRelativeFromSelf = false
+                    isRelativeFromSelf = false,
+                    disabled = false
                 )
             )
         }
@@ -611,7 +623,11 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 "setfix" -> ActionType.SETFIX
                 "unfix" -> ActionType.UNFIX
                 "gosub" -> ActionType.GOSUB
+                "goto" -> ActionType.GOTO
+                "gosubrandom" -> ActionType.GOSUBRANDOM
+                "gotorandom" -> ActionType.GOTORANDOM
                 "label" -> ActionType.LABEL
+                "ghost" -> ActionType.GHOST
                 "nop" -> ActionType.NOP
                 else -> null
             }
@@ -662,7 +678,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
             // This handles: in(), collide(), and apart() with both #ID and "file.cel"
             // This regex handles: in(#1, #2), in "a.cel" "b.cel", and @in #1 #2
             val triggerRegex =
-                Regex("""^(in|collide|apart|out)\s*\(?\s*(?:#?(\d+)|"([^"]+)")\s*[, ]\s*(?:#?(\d+)|"([^"]+)")\s*\)?""")
+                Regex("""^(in|out|collide|apart)\s*\(?\s*(?:#?(\d+)|"([^"]+)")\s*[, ]\s*(?:#?(\d+)|"([^"]+)")\s*\)?""")
             val triggerMatch = triggerRegex.find(clean)
 
             if (triggerMatch != null) {
@@ -739,7 +755,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                     val tx = parts[1].toIntOrNull() ?: 0
                     val ty = parts[2].toIntOrNull() ?: 0
                     // We use -1/-1 for trigger/target because moveto is global
-                    snapRules.add(SnapRule(-1, -1, obj, tx, ty, isRelative = false, isRelativeFromSelf = false))
+                    snapRules.add(SnapRule(-1, -1, obj, tx, ty, isRelative = false, isRelativeFromSelf = false, disabled = false))
                 }
             }
 
@@ -753,7 +769,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                     val tx = parts[1].toIntOrNull() ?: 0
                     val ty = parts[2].toIntOrNull() ?: 0
                     // We use -1/-1 for trigger/target because moveto is global
-                    snapRules.add(SnapRule(-1, -1, obj, tx, ty, isRelative = false, isRelativeFromSelf = true))
+                    snapRules.add(SnapRule(-1, -1, obj, tx, ty, isRelative = false, isRelativeFromSelf = true, disabled = false))
                 }
             }
         }
