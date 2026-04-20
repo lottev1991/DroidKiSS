@@ -15,7 +15,7 @@
 
 DroidKiSS comes in "Full" and "Lite" editions. Don't worry, both editions are free of charge and contain no ads. There is no "premium" edition and I don't do ads.
 
-The only real difference between the editions is that the Full edition incorporates LibVLC, whereas Lite does not. Now, you need to understand that LibVLC is a *huge* library; VLC is known to essentially incorporate every single media encoding known to man. Just by including this library alone, the Full edition is **four times as large as Lite**. Crazy, right?
+The only real difference between the editions is that the Full edition incorporates LibVLC, whereas Lite does not. Now, you need to understand that LibVLC is a *huge* library; VLC is known to essentially incorporate every single media encoding known to man. Just by including this library alone, the Full edition is **three times as large as Lite**. Crazy, right?
 
 Now, the reason I created a version incorporating LibVLC in the first place is because many old dolls contain non-PCM WAV files. Android's default MediaPlayer and SoundPool classes simply do *not* like non-PCM WAV files. (If you don't know what that means: let's just say that PCM is the "standard" for WAV, but technically they can use other codecs. The thing is though that those other codecs don't have universal support.)
 
