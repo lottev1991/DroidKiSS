@@ -70,7 +70,9 @@ class DollEngine(context: Context,
         val cnfBytes =
             cache[actualCnfKey] ?: throw Exception("CNF bytes missing (Key: $actualCnfKey)")
 
-        val rawText = String(cnfBytes, charset("Windows-1252"))
+        val rawText = String(cnfBytes, charset("SHIFT_JIS"))
+        // Switched to SHIFT_JIS for common Japanese dolls.
+        // Note that this may break CNF text that's neither in English or Japanese (e.g. Spanish, French, etc.). For now, I have no plans to add yet another bloated dependency, so apologies in advance.
 
         rawCnfString = rawText
 

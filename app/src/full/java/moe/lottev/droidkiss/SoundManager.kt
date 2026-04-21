@@ -7,13 +7,17 @@ import org.videolan.libvlc.Media
 import org.videolan.libvlc.MediaPlayer
 import java.io.File
 
+/** Sound manager for `sound()` and `music()` FKiSS actions */
 class SoundManager(private val context: Context) {
-
-    // Initialize LibVLC with standard options
+    /** Initialize LibVLC with standard options */
     private val libVLC: LibVLC by lazy {
         val args = arrayListOf(
             "-vvv",
             "--aout=opensles",
+            "--file-caching=2048",
+            "--clock-jitter=0",
+            "--clock-synchro=0",
+            // Tried adding some settings to improve audio playback, not sure it helps but it's something at least
         )
 
         // MIDI soundfont path
@@ -51,6 +55,7 @@ class SoundManager(private val context: Context) {
         }
     }
 
+    /** Play sound file */
     fun play(name: String, loop: Boolean = false) {
         if (isSoundSuspended) return
 
@@ -93,6 +98,7 @@ class SoundManager(private val context: Context) {
         }
     }
 
+    /** Handles MIDI actions */
     fun handleMusicAction(filename: String, allFiles: Map<String, ByteArray>) {
         val cleanName = filename.lowercase().trim()
         val entry = allFiles.entries.find {
@@ -105,6 +111,7 @@ class SoundManager(private val context: Context) {
         }
     }
 
+    /** Play MIDI music */
     private fun playMidi(bytes: ByteArray) {
         try {
             stopMusic()
@@ -123,6 +130,7 @@ class SoundManager(private val context: Context) {
         }
     }
 
+    /** Pause MIDI music */
     fun pauseMusic() {
         isMusicSuspended = true
         if (musicPlayer?.isPlaying == true) {
@@ -130,11 +138,13 @@ class SoundManager(private val context: Context) {
         }
     }
 
+    /** Resume MIDI music */
     fun resumeMusic() {
         isMusicSuspended = false
         musicPlayer?.play()
     }
 
+    /** Stop MIDI music */
     fun stopMusic() {
         musicJob?.cancel()
         musicPlayer?.apply {
@@ -144,18 +154,21 @@ class SoundManager(private val context: Context) {
         musicPlayer = null
     }
 
+    /** Pause all media */
     fun pauseAll() {
         isSoundSuspended = true
         sfxPlayers.values.forEach { if (it.isPlaying) it.pause() }
         pauseMusic()
     }
 
+    /** Resume all media */
     fun resumeAll() {
         isSoundSuspended = false
         sfxPlayers.values.forEach { it.play() }
         resumeMusic()
     }
 
+    /** Stop all media */
     fun stopAll() {
         stopMusic()
         sfxPlayers.values.forEach {
@@ -166,12 +179,15 @@ class SoundManager(private val context: Context) {
         soundJob?.cancel()
     }
 
+    /** Release all media */
     fun release() {
         stopAll()
         soundMap.clear()
         libVLC.release() // Crucial to release the native LibVLC instance
     }
 
+    /** Get path of soundfont file */
+    @Suppress("SameParameterValue")
     private fun getSoundFontPath(fileName: String): String? {
         val destinationFile = File(context.cacheDir, fileName)
 

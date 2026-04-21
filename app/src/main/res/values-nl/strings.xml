@@ -29,4 +29,6 @@
     <string name="website_caller">Website ontwikkelaar</string>
     <string name="app_version_caller">Versie:</string>
     <string name="close">Sluiten</string>
+    <string name="show_cnf_source">Toon CNF-tekst</string>
+    <string name="back">Terug</string>
 </resources>

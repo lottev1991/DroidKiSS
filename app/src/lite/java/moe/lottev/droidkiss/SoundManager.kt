@@ -6,6 +6,7 @@ import android.net.Uri
 import kotlinx.coroutines.Job
 import java.io.File
 
+/** Sound manager for `sound()` and `music()` FKiSS actions */
 class SoundManager(private val context: Context) {
 
     private var musicPlayer: MediaPlayer? = null
@@ -20,6 +21,9 @@ class SoundManager(private val context: Context) {
 
     val soundMap = mutableMapOf<String, String>()
 
+    /**
+     * Loads sound bytes into a temp file for the media player to read.
+     */
     fun loadSound(name: String, bytes: ByteArray) {
         try {
             // Convert if necessary
@@ -33,6 +37,7 @@ class SoundManager(private val context: Context) {
         }
     }
 
+    /** Play sound file */
     fun play(name: String, loop: Boolean = false) {
         if (isSoundSuspended) return
 
@@ -66,6 +71,7 @@ class SoundManager(private val context: Context) {
         }
     }
 
+    /** Convert 8-bit WAV to 16-bit */
     fun convert8BitTo16Bit(input: ByteArray): ByteArray {
         if (input.size < 44) return input
 
@@ -117,6 +123,7 @@ class SoundManager(private val context: Context) {
     }
 
     // Helper functions for Little Endian writing
+    /** Write `int` for Little Endian */
     private fun writeInt(output: ByteArray, offset: Int, value: Int) {
         output[offset] = (value and 0xFF).toByte()
         output[offset + 1] = (value shr 8 and 0xFF).toByte()
@@ -124,11 +131,13 @@ class SoundManager(private val context: Context) {
         output[offset + 3] = (value shr 24 and 0xFF).toByte()
     }
 
+    /** Write `short` for Little Endian */
     private fun writeShort(output: ByteArray, offset: Int, value: Short) {
         output[offset] = (value.toInt() and 0xFF).toByte()
         output[offset + 1] = (value.toInt() shr 8 and 0xFF).toByte()
     }
 
+    /** Handles MIDI actions */
     fun handleMusicAction(filename: String, allFiles: Map<String, ByteArray>) {
         val cleanName = filename.lowercase().trim()
         val entry = allFiles.entries.find {
@@ -141,6 +150,7 @@ class SoundManager(private val context: Context) {
         }
     }
 
+    /** Play MIDI music */
     private fun playMidi(bytes: ByteArray) {
         try {
             stopMusic()
@@ -158,6 +168,7 @@ class SoundManager(private val context: Context) {
         }
     }
 
+    /** Pause MIDI music */
     fun pauseMusic() {
         isMusicSuspended = true
         if (musicPlayer?.isPlaying == true) {
@@ -165,11 +176,13 @@ class SoundManager(private val context: Context) {
         }
     }
 
+    /** Resume MIDI music */
     fun resumeMusic() {
         isMusicSuspended = false
         musicPlayer?.start()
     }
 
+    /** Stop MIDI music */
     fun stopMusic() {
         musicJob?.cancel()
         musicPlayer?.apply {
@@ -179,18 +192,21 @@ class SoundManager(private val context: Context) {
         musicPlayer = null
     }
 
+    /** Pause all media */
     fun pauseAll() {
         isSoundSuspended = true
         sfxPlayers.values.forEach { if (it.isPlaying) it.pause() }
         pauseMusic()
     }
 
+    /** Resume all media */
     fun resumeAll() {
         isSoundSuspended = false
         sfxPlayers.values.forEach { it.start() }
         resumeMusic()
     }
 
+    /** Stop all media */
     fun stopAll() {
         stopMusic()
         sfxPlayers.values.forEach {
@@ -200,6 +216,7 @@ class SoundManager(private val context: Context) {
         soundJob?.cancel()
     }
 
+    /** Release all media */
     fun release() {
         stopAll()
         soundMap.clear()

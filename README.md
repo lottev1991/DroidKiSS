@@ -15,7 +15,7 @@
 
 DroidKiSS comes in "Full" and "Lite" editions. Don't worry, both editions are free of charge and contain no ads. There is no "premium" edition and I don't do ads.
 
-The only real difference between the editions is that the Full edition incorporates LibVLC, whereas Lite does not. Now, you need to understand that LibVLC is a *huge* library; VLC is known to essentially incorporate every single media encoding known to man. Just by including this library alone, the Full edition is **three times as large as Lite**. Crazy, right?
+The only real difference between the editions is that the Full edition incorporates LibVLC, whereas Lite does not. Now, you need to understand that LibVLC is a *huge* library; VLC is known to essentially incorporate every single media encoding known to man. Just by including this library alone, the Full edition is **several times the size of Lite**. Crazy, right?
 
 Now, the reason I created a version incorporating LibVLC in the first place is because many old dolls contain non-PCM WAV files. Android's default MediaPlayer and SoundPool classes simply do *not* like non-PCM WAV files. (If you don't know what that means: let's just say that PCM is the "standard" for WAV, but technically they can use other codecs. The thing is though that those other codecs don't have universal support.)
 
@@ -56,6 +56,7 @@ Now, this project is by no means the first viewer for Android. However, the othe
 
 ## Known bugs
 - ~~Some WAV/AU files will not play, remaining silent instead; this is a limitation of the native Android sound API. Basically, only PCM-encoded WAV/AU files will play. The only way to solve this problem would be to incorporate FFmpeg into the project. Given how huge that library is, I'm not sure yet if I wanna deal with that. Therefore, for now: tough luck, and I'm sorry. (I'm willing to consider FFmpeg again if enough feedback is given in its favor. Do keep the app size in mind, however.)~~ No longer present in the Full version of the app. It persists in Lite; this is by design, since it keeps the app lightweight by not using LibVLC.
+- Sometimes, audio is a little bit laggy. Looping audio often has a gap in-between and sometimes sounds won't play. I'm trying to find a solution for this still, if possible.
 - Object bounding boxes are currently being calculated from the width and height of only one cel within said object, meaning that sometimes, objects can "clip" weirdly at the edges. One day, I hope to make this calculation object-dependent instead (I've tried before, and it sadly wasn't working out at the time, so for now, this will have to do).
 
 If you encounter any more bugs that I perhaps missed, please feel free to open an [issue](https://github.com/lottev1991/droidkiss/issues).

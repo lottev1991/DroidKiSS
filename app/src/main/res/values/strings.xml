@@ -28,4 +28,6 @@
     <string name="website_caller">Developer\'s website</string>
     <string name="app_version_caller">Version:</string>
     <string name="close">Close</string>
+    <string name="show_cnf_source">Show CNF text</string>
+    <string name="back">Back</string>
 </resources>

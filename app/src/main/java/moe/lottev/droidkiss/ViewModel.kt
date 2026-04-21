@@ -157,7 +157,7 @@ class ViewModel(application: Application) :
                             time = 0
                         }
                     }
-                    withContext(Dispatchers.Main) {
+                    withContext(Dispatchers.Default) {
                         executeEvent("alarm($alarmId)")
                     }
                 }
@@ -173,6 +173,8 @@ class ViewModel(application: Application) :
 
         // Stop all sounds
         soundManager.stopAll()
+
+        currentOffsets.clear()
 
         // Stop timer
         stopTimer()
@@ -245,7 +247,6 @@ class ViewModel(application: Application) :
     /** Load expansion set into the viewmodel */
     @Suppress("unused")
     fun loadExpansionSet(context: Context, uri: Uri, specificCnf: String? = null) {
-
         availableCnfs = emptyList()
 
         viewModelScope.launch {
@@ -271,6 +272,7 @@ class ViewModel(application: Application) :
                 // Execute special events
                 executeEvent("begin")
                 executeEvent("eventhandler")
+                executeEvent("initialize")
                 changeSet(0)
             } catch (e: Exception) {
                 uiState = KissUiState.Error(e.message ?: e.toString())
@@ -798,12 +800,6 @@ class ViewModel(application: Application) :
         return true
     }
 
-    fun setGhost(id: Int, value: Boolean) {
-        currentDoll?.layers?.filter { it.descriptor.objectId == id }?.forEach {
-            it.descriptor.isGhosted = value
-        }
-    }
-
     fun isPixelCollisionWithOffset(
         layer1: KissLayer,
         offset1: Offset,
@@ -1090,6 +1086,7 @@ class ViewModel(application: Application) :
     }
 
     /** Triggers release actions by name */
+    @Suppress("unused")
     fun triggerReleaseByName(target: String) {
         val cleanTarget = target.replace("#", "").lowercase()
 

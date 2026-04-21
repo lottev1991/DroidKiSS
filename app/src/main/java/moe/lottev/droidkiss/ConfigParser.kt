@@ -46,7 +46,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
         currentEventActions.clear()
         lineCounter = 0
 
-        val content = data.toString(Charsets.ISO_8859_1)
+        val content = data.toString(Charsets.UTF_8) // UTF-8 character support
 
         parseSnapRules(content, null)
         parseGlobalCoords(content)

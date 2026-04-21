@@ -23,9 +23,9 @@ android {
     defaultConfig {
         applicationId = "moe.lottev.droidkiss"
         minSdk = 28
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
-        versionName = "1.3-beta"
+        versionName = "1.5-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         signingConfig = signingConfigs.getByName("debug")
@@ -42,8 +42,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -117,12 +117,7 @@ dependencies {
     implementation(libs.androidx.compose.runtime)
     implementation(libs.androidx.compose.foundation.layout)
     implementation(libs.androidx.compose.foundation)
-    implementation(libs.androidx.leanback)
-    implementation(libs.protolite.well.known.types)
-    implementation(libs.androidx.material3)
     implementation(libs.androidx.compose.material.icons.extended)
-    implementation(libs.androidx.foundation)
-    implementation(libs.androidx.foundation.layout)
     implementation(libs.androidx.appcompat)
     "fullImplementation"(libs.libvlc.all)
     testImplementation(libs.junit)

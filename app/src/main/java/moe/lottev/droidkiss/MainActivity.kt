@@ -59,18 +59,19 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.media.AudioManager
 import android.provider.MediaStore
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -84,6 +85,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -103,11 +106,14 @@ import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withLink
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.core.graphics.get
 import kotlin.math.roundToInt
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.createBitmap
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -136,7 +142,20 @@ class MainActivity : ComponentActivity() {
     /** On initialization of the app. */
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS is specifically designed to
+            // force the app into the cutout area in ALL orientations.
+            window.attributes.layoutInDisplayCutoutMode =
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+        } else
+            window.attributes.layoutInDisplayCutoutMode =
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+
         super.onCreate(savedInstanceState)
+        window.attributes.layoutInDisplayCutoutMode =
+            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         hideSystemUI()
         volumeControlStream = AudioManager.STREAM_MUSIC
         setContent {
@@ -198,9 +217,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Track active timer actions
-    //private val activeTimers = mutableMapOf<Int, KissAction>()
-
+    /** When the app is in the foreground.  */
     fun onAppForegrounded(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
@@ -229,6 +246,7 @@ class MainActivity : ComponentActivity() {
 }
 
 /** DroidKiSS logo composable */
+@Preview
 @Composable
 fun DroidKissLogo() {
     Image(
@@ -237,62 +255,60 @@ fun DroidKissLogo() {
     )
 }
 
-/** Button and dialog for showing application info. */
+/** Button for showing application info. */
+@Preview
 @Suppress("AssignedValueIsNeverRead")
 @Composable
 fun AppInfoButton() {
     var showDialog by remember { mutableStateOf(false) }
+
+    Button(
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onPrimary),
+        onClick = { showDialog = true }
+    ) {
+        Text(stringResource(R.string.app_info_btn))
+    }
+
+    if (showDialog) {
+        // Pass the lambda to set state back to false
+        AppInfoDialog(onDismiss = { showDialog = false })
+    }
+}
+
+/** Dialog for showing application info. */
+@Composable
+fun AppInfoDialog(onDismiss: () -> Unit) { // Added parameter here
     val context = LocalContext.current
     val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
     val versionName = packageInfo.versionName
 
-    // The dedicated button to trigger info
-    Button(
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.onPrimary),
-        onClick = {
-        showDialog = true }
-    ) {
-        Text(stringResource(R.string.app_info_btn))
-    }
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text(stringResource(R.string.app_info_title)) },
-            text = {
-                Column {
-                    Text("${stringResource(R.string.app_name_caller)}: ${stringResource(R.string.app_name)}")
-                    Text("${stringResource(R.string.app_version_caller)} $versionName")
-                    Text("${stringResource(R.string.dev_caller)} Lotte V")
-                    Text("${stringResource(R.string.license_caller)} GPL 3.0")
-                    Text(buildAnnotatedString{
-                        withLink(
-                            LinkAnnotation.Url(
-                                url = "https://github.com/lottev1991/droidkiss",
-                            )
-                        ) {
-                            append(stringResource(R.string.source_code_caller))
-                        }
-                    })
-                    Text(buildAnnotatedString {
-                        withLink(
-                            LinkAnnotation.Url(
-                                url = "https://lottev.moe",
-                            )
-                        ) {
-                            append(stringResource(R.string.website_caller))
-                        }
-                    })
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showDialog = false }) {
-                    Text(stringResource(R.string.close))
-                }
+    AlertDialog(
+        onDismissRequest = onDismiss, // Use the passed lambda
+        title = { Text(stringResource(R.string.app_info_title)) },
+        text = {
+            Column {
+                Text("${stringResource(R.string.app_name_caller)}: ${stringResource(R.string.app_name)}")
+                Text("${stringResource(R.string.app_version_caller)} $versionName")
+                Text("${stringResource(R.string.dev_caller)} Lotte V")
+                Text("${stringResource(R.string.license_caller)} GPL 3.0")
+                Text(buildAnnotatedString {
+                    withLink(LinkAnnotation.Url("https://github.com/lottev1991/droidkiss")) {
+                        append(stringResource(R.string.source_code_caller))
+                    }
+                })
+                Text(buildAnnotatedString {
+                    withLink(LinkAnnotation.Url("https://lottev.moe")) {
+                        append(stringResource(R.string.website_caller))
+                    }
+                })
             }
-        )
-    }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { // Use the passed lambda
+                Text(stringResource(R.string.close))
+            }
+        }
+    )
 }
 
 /** The doll viewport */
@@ -412,7 +428,6 @@ fun DollButtons(viewModel: ViewModel) {
             // This is usually not a problem due to their relatively high resolution,
             // meaning that bigger dolls will usually fit, unlike on older desktop computers.
             // That being said, if it ever does become a problem, I won't mind changing it (it's not very difficult to do).
-
             Button(
                 border = BorderStroke(
                     1.dp,
@@ -472,8 +487,6 @@ fun DollButtons(viewModel: ViewModel) {
 
 
 /** The doll screen. Loads the doll canvas, as well as the current UI state and the buttons. */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun DollScreen(viewModel: ViewModel, onLaunchPicker: () -> Unit) {
     val context = LocalContext.current
@@ -823,7 +836,7 @@ fun DollCanvas(doll: KissDoll, viewModel: ViewModel, graphicsLayer: GraphicsLaye
                                     transformOrigin = TransformOrigin(0f, 0f)
                                     alpha = layer.alpha
                                 },
-                            contentDescription = stringResource(R.string.desc_doll_cel),
+                            contentDescription = "${layer.descriptor.fileName}; ${stringResource(R.string.desc_doll_cel)}",
                             filterQuality = FilterQuality.None,
                             contentScale = ContentScale.None
                         )
@@ -837,9 +850,12 @@ fun DollCanvas(doll: KissDoll, viewModel: ViewModel, graphicsLayer: GraphicsLaye
 
 /** Menu for extra options.
  Created so that the button bar at the bottom wouldn't get too crowded. */
+@Suppress("AssignedValueIsNeverRead")
 @Composable
 fun DollMenu(viewModel: ViewModel, onLaunchPicker: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
+    var showDialog by remember { mutableStateOf(false) }
+
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val expansionLauncher = rememberLauncherForActivityResult(
@@ -848,6 +864,30 @@ fun DollMenu(viewModel: ViewModel, onLaunchPicker: () -> Unit) {
         uri?.let { viewModel.prepareExpansion(context, it) }
     }
     val screenshotMessage = stringResource(R.string.saved_screenshot_toast)
+
+    if (showDialog) {
+        AppInfoDialog(onDismiss = { showDialog = false })
+    }
+
+    var showCnfSource by remember { mutableStateOf(false) }
+    if (showCnfSource) {
+        Dialog(
+            onDismissRequest = { showCnfSource = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false), // Allows full screen
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                Column {
+                    // Add a Close button at the top
+                    // With scrollable text
+                    CnfSourceWindow(viewModel, onBackClick = { showCnfSource = false })
+                }
+            }
+        }
+    }
+
     Box(
         contentAlignment = Alignment.BottomStart,
         modifier = Modifier.padding(50.dp, 0.dp, 0.dp, 0.dp)
@@ -951,10 +991,24 @@ fun DollMenu(viewModel: ViewModel, onLaunchPicker: () -> Unit) {
                 }
             )
             DropdownMenuItem(
+                text = { Text(stringResource(R.string.show_cnf_source)) },
+                onClick = {
+                    expanded = false
+                    showCnfSource = true
+                }
+            )
+            DropdownMenuItem(
                 text = { Text(stringResource(R.string.close_current_doll)) },
                 onClick = {
                     expanded = false
                     viewModel.closeLzh()
+                }
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.app_info_btn)) },
+                onClick = {
+                    expanded = false
+                    showDialog = true
                 }
             )
         }
@@ -966,10 +1020,7 @@ fun DollMenu(viewModel: ViewModel, onLaunchPicker: () -> Unit) {
 fun SetButtons(viewModel: ViewModel) {
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-
-            //.navigationBarsPadding()
-        ,
+            .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Bottom
     ) {
@@ -1036,6 +1087,57 @@ fun CnfSelectionDialog(
         }
     )
 }
+
+/** CNF source window */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CnfSourceWindow(viewModel: ViewModel, onBackClick: () -> Unit) {
+    var fileContent by remember { mutableStateOf(viewModel.fullCnfText) }
+    val dollName = viewModel.currentDoll?.name ?: ""
+
+    LaunchedEffect(Unit) {
+        fileContent = try {
+            viewModel.fullCnfText
+        } catch (e: Exception) {
+            ViewModel.KissUiState.Error("${e.message}")
+            "${e.message}"
+        }
+    }
+
+    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+    Scaffold(
+        contentWindowInsets = ScaffoldDefaults.contentWindowInsets
+            .exclude(WindowInsets.displayCutout),
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
+        topBar = {
+            TopAppBar(
+                title = { Text(dollName) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                ),
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back)
+                        )
+                    }
+                }
+            )
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .padding(0.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text(text = fileContent)
+        }
+    }
+}
+
 
 /** Function to save doll screenshots. They get saved in a special folder; this is hardcoded. The filenames are hardcoded as well, containing the current date and time. */
 fun saveScreenshot(context: Context, bitmap: Bitmap, fileName: String) {
