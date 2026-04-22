@@ -19,3 +19,14 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep all LibVLC classes and their members
+-keep class org.videolan.libvlc.** { *; }
+
+# Specifically keep the interfaces and their inner classes (like IMedia$Track)
+-keep interface org.videolan.libvlc.** { *; }
+
+# Ensure JNI entry points aren't stripped
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
