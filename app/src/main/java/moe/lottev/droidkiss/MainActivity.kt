@@ -1104,7 +1104,6 @@ fun CnfSourceWindow(viewModel: ViewModel, onBackClick: () -> Unit) {
         }
     }
 
-    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     Scaffold(
         contentWindowInsets = ScaffoldDefaults.contentWindowInsets
             .exclude(WindowInsets.displayCutout),
@@ -1125,12 +1124,12 @@ fun CnfSourceWindow(viewModel: ViewModel, onBackClick: () -> Unit) {
                 }
             )
         }
-    ) {
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.surfaceContainer)
-                .padding(0.dp)
+                .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
             Text(text = fileContent)
