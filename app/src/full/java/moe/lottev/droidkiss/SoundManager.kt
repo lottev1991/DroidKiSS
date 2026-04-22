@@ -14,10 +14,6 @@ class SoundManager(private val context: Context) {
         val args = arrayListOf(
             "-vvv",
             "--aout=opensles",
-            "--file-caching=2048",
-            "--clock-jitter=0",
-            "--clock-synchro=0",
-            // Tried adding some settings to improve audio playback, not sure it helps but it's something at least
         )
 
         // MIDI soundfont path
