@@ -168,19 +168,18 @@ class ViewModel(application: Application) :
 
     /** Handles the cleanup and @end events before a doll is swapped or closed. */
     suspend fun shutdownCurrentDoll() {
-        // Execute any `end()` events
-        executeEvent("end")
-
-        // Stop all sounds
-        soundManager.stopAll()
-
+        // Clear current offsets
         currentOffsets.clear()
-
-        // Stop timer
-        stopTimer()
 
         // Add a delay
         delay(500)
+        // Stop all sounds
+        soundManager.stopAll()
+        // Stop timer
+        stopTimer()
+
+        // Clear master file cache for cleanup
+        masterFileCache.clear()
     }
 
     var availableCnfs by mutableStateOf<List<String>>(emptyList())
@@ -188,23 +187,28 @@ class ViewModel(application: Application) :
 
     /** Closes current LZH, returning to the main screen */
     fun closeLzh() {
+        if (currentDoll != null && uiState == KissUiState.Loaded(currentDoll!!)) {
+            // Trigger any end() events if doll is loaded
+            executeEvent("end")
+        }
         viewModelScope.launch {
             uiState = KissUiState.Loading
             shutdownCurrentDoll()
             uiState = KissUiState.Empty
         }
     }
-
     @Suppress("unused")
-            /** Load LZH into the viewmodel */
+    /** Load LZH into the viewmodel */
     fun loadLzh(context: Context, uri: Uri, specificCnf: String? = null) {
+        if (currentDoll != null && uiState == KissUiState.Loaded(currentDoll!!)) {
+            // Trigger any end() events if doll is loaded
+            executeEvent("end")
+        }
         uiState = KissUiState.Loading
         viewModelScope.launch {
             shutdownCurrentDoll()
             isExpansionSet = false
 
-            // Clear master cache
-            masterFileCache.clear()
             availableCnfs = emptyList() // Reset CNF list for the new LZH
 
             try {
@@ -285,6 +289,7 @@ class ViewModel(application: Application) :
     var pendingCnfOptions by mutableStateOf<List<String>>(emptyList())
     var selectedUri by mutableStateOf<Uri?>(null)
 
+    /** Prepare LZH for multiple CNFs */
     fun prepareLzh(context: Context, uri: Uri) {
         viewModelScope.launch {
             // Use the engine to see how many CNFs are inside
