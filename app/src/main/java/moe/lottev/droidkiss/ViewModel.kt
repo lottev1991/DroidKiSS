@@ -173,10 +173,12 @@ class ViewModel(application: Application) :
 
         // Add a delay
         delay(500)
-        // Stop music
-        soundManager.stopMusic()
+
         // Stop timer
         stopTimer()
+
+        // Stop all sounds
+        soundManager.stopAll()
 
         // Clear master file cache for cleanup
         masterFileCache.clear()
