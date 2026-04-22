@@ -173,8 +173,8 @@ class ViewModel(application: Application) :
 
         // Add a delay
         delay(500)
-        // Stop all sounds
-        soundManager.stopAll()
+        // Stop music
+        soundManager.stopMusic()
         // Stop timer
         stopTimer()
 

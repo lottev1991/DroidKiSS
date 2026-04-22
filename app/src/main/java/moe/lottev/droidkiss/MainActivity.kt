@@ -911,7 +911,7 @@ fun DollMenu(viewModel: ViewModel, onLaunchPicker: () -> Unit) {
                 text = { Text(stringResource(R.string.load_another_doll)) },
                 onClick = {
                     onLaunchPicker.invoke()
-                    viewModel.soundManager.stopAll()
+                    viewModel.soundManager.stopMusic()
                     expanded = false
                 }
             )
