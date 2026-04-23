@@ -660,32 +660,38 @@ fun DollCanvas(doll: KissDoll, viewModel: ViewModel, graphicsLayer: GraphicsLaye
                             totalAccumulatedY += dragAmount.y / scale
 
                             val objectLayers =
-                                doll.layers.asReversed().filter { it.descriptor.objectId == id }
+                                doll.layers.asReversed().filter { it.descriptor.objectId == id && !it.descriptor.isUnmapped}
 
                             val isGroupFixed = doll.layers.any {
                                 it.descriptor.objectId == id && it.descriptor.isFixed
                             }
                             if (isGroupFixed) return@detectDragGestures
 
-                            objectLayers.forEach { objectLayer ->
-                                // Define the 'Walls'
-                                val minX = -objectLayer.x.toFloat()
-                                val minY = -objectLayer.y.toFloat()
-                                val maxX = (doll.envWidth - objectLayer.x - objectLayer.bitmap.width).toFloat()
-                                val maxY =
-                                    (doll.envHeight - objectLayer.y - objectLayer.bitmap.height).toFloat()
+                            val minBaseX = objectLayers.minOf { it.x }
+                            val minBaseY = objectLayers.minOf { it.y }
+                            val maxBaseX = objectLayers.maxOf { it.x + it.bitmap.width }
+                            val maxBaseY = objectLayers.maxOf { it.y + it.bitmap.height }
 
-                                // Update Visuals: The object stays at the wall because we clamp
-                                // the GHOST finger, not the CURRENT position.
-                                viewModel.currentOffsets[id] = Offset(
-                                    totalAccumulatedX.coerceIn(
-                                        minOf(minX, maxX),
-                                        maxOf(minX, maxX)
-                                    ),
-                                    totalAccumulatedY.coerceIn(minOf(minY, maxY), maxOf(minY, maxY))
+                            // Define the Walls based on the group's "Footprint"
+                            // We use minBaseX/Y to ensure the top-most/left-most cel
+                            // stops at the edge of the screen.
+                            val minAllowedOffsetH = -minBaseX.toFloat()
+                            val minAllowedOffsetV = -minBaseY.toFloat()
+                            val maxAllowedOffsetH = (doll.envWidth - maxBaseX).toFloat()
+                            val maxAllowedOffsetV = (doll.envHeight - maxBaseY).toFloat()
+
+                            // Update the Offset
+                            // We use the same clamp for the WHOLE ID group.
+                            viewModel.currentOffsets[id] = Offset(
+                                totalAccumulatedX.coerceIn(
+                                    minOf(minAllowedOffsetH, maxAllowedOffsetH),
+                                    maxOf(minAllowedOffsetH, maxAllowedOffsetH)
+                                ),
+                                totalAccumulatedY.coerceIn(
+                                    minOf(minAllowedOffsetV, maxAllowedOffsetV),
+                                    maxOf(minAllowedOffsetV, maxAllowedOffsetV)
                                 )
-                            }
-
+                            )
                         }
                     },
                     onDragEnd = {

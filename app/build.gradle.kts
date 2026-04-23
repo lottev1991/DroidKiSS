@@ -25,7 +25,7 @@ android {
         minSdk = 28
         targetSdk = 37
         versionCode = 1
-        versionName = "1.6-beta"
+        versionName = "1.7-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         signingConfig = signingConfigs.getByName("debug")
@@ -54,7 +54,7 @@ android {
     flavorDimensions += "version"
 
     productFlavors {
-        // 2. Define the 'lite' flavor
+        // Define the 'lite' flavor
         create("lite") {
             dimension = "version"
             applicationIdSuffix = ".lite"
@@ -65,7 +65,7 @@ android {
             manifestPlaceholders["appLabel"] = "@string/app_name"
         }
 
-        // 3. Define the 'full' flavor
+        // Define the 'full' flavor
         create("full") {
             dimension = "version"
             applicationIdSuffix = ".full"
