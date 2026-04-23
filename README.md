@@ -65,6 +65,8 @@ If you encounter any more bugs that I perhaps missed, please feel free to open a
 ### Where can I download KiSS dolls?
 The main place I recommend to download KiSS dolls from is the old website [OtakuWorld](https://otakuworld.com/kiss). It used to be a paysite at one point, but hasn't been since 2014, meaning you can download everything on there for free nowadays (don't let the "Free KiSS Zone" distract you; it's an artifact of olden times).
 
+Another good place to find dolls, including historical ones (many of which are otherwise gone from the internet), is William Miles' [UltraKiss Web Portal](https://www.bronzeart.ca/ultrakiss/Hosted/). While designed for inclusion in UltraKiss, most of the dolls on there can be played in other viewers as well, including DroidKiSS.
+
 There's also [Ephralon's KiSS cafe](https://kisscafe.ephralon.de/dolls.php), which is a place I hung out on a lot back in the day. <sub>And I may or may not have joined a certain KiSS doll collab there when I was 12.</sub>
 
 There's also good ol' [Archive.org](https://archive.org), in both the "main" section as well as the Web Archive. Not only are there plenty of old KiSS doll websites archived, but the "main" archive also contains archived KiSS dolls (both indidivual ones and collections) for download. Take a look, I'd say.
