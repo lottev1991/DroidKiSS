@@ -69,6 +69,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.exclude
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -886,7 +887,6 @@ fun DollMenu(viewModel: ViewModel, onLaunchPicker: () -> Unit) {
                 color = MaterialTheme.colorScheme.primaryContainer,
             ) {
                 Column {
-                    // Add a Close button at the top
                     // With scrollable text
                     CnfSourceWindow(viewModel, onBackClick = { showCnfSource = false })
                 }
@@ -1138,7 +1138,9 @@ fun CnfSourceWindow(viewModel: ViewModel, onBackClick: () -> Unit) {
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
-            Text(text = fileContent)
+            SelectionContainer { // Make text selectable
+                Text(text = fileContent)
+            }
         }
     }
 }
