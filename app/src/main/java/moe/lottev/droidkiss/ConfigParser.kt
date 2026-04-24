@@ -102,6 +102,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 "drop",
                 "fixcatch",
                 "fixdrop",
+                "setfix",
                 "in",
                 "out",
                 "collide",
@@ -119,7 +120,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 "shell",
             )
 
-            val hasForbiddenWord = forbidden.any { cleaned.contains(it) && !cleaned.contains("begin") && !cleaned.contains("setfix") }
+            val hasForbiddenWord = forbidden.any { cleaned.contains(it) && !cleaned.contains("begin") }
 
             val actionRegex = Regex("""(\w+)\s*\(([^)]+)\)""")
 
