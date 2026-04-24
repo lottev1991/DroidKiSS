@@ -89,9 +89,13 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 "transparent",
                 "randomtimer",
                 "timer",
+                "iffixed",
+                "ifnotfixed",
                 "map",
                 "unmap",
                 "altmap",
+                "ifmapped",
+                "ifnotmapped",
                 "press",
                 "release",
                 "catch",
@@ -112,8 +116,10 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 "version",
                 "ghost",
                 "nop",
+                "shell",
             )
-            val hasForbiddenWord = forbidden.any { cleaned.contains(it) && !cleaned.contains("setfix") }
+            val words = cleaned.split(Regex("\\W+"))
+            val hasForbiddenWord = forbidden.any { words.contains(it) }
 
             val actionRegex = Regex("""(\w+)\s*\(([^)]+)\)""")
 
@@ -200,6 +206,8 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                         "unmap" -> ActionType.UNMAP
                         "map" -> ActionType.MAP
                         "altmap" -> ActionType.ALTMAP
+                        "ifmapped" -> ActionType.IFMAPPED
+                        "ifnotmapped" -> ActionType.IFNOTMAPPED
                         "alarm" -> ActionType.ALARM
                         "move" -> ActionType.MOVE
                         "movebyx" -> ActionType.MOVEBYX
@@ -221,6 +229,8 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                         "changeset" -> ActionType.CHANGESET
                         "setfix" -> ActionType.SETFIX
                         "unfix" -> ActionType.UNFIX
+                        "iffixed" -> ActionType.IFFIXED
+                        "ifnotfixed" -> ActionType.IFNOTFIXED
                         "gosub" -> ActionType.GOSUB
                         "goto" -> ActionType.GOTO
                         "gosubrandom" -> ActionType.GOSUBRANDOM
@@ -228,6 +238,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                         "label" -> ActionType.LABEL
                         "ghost" -> ActionType.GHOST
                         "nop" -> ActionType.NOP
+                        "shell" -> ActionType.SHELL
                         else -> null
                     }
 
@@ -284,6 +295,8 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                         "unmap" -> ActionType.UNMAP
                         "map" -> ActionType.MAP
                         "altmap" -> ActionType.ALTMAP
+                        "ifmapped" -> ActionType.IFMAPPED
+                        "ifnotmapped" -> ActionType.IFNOTMAPPED
                         "move" -> ActionType.MOVE
                         "movebyx" -> ActionType.MOVEBYX
                         "movebyy" -> ActionType.MOVEBYY
@@ -305,6 +318,8 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                         "changeset" -> ActionType.CHANGESET
                         "setfix" -> ActionType.SETFIX
                         "unfix" -> ActionType.UNFIX
+                        "iffixed" -> ActionType.IFFIXED
+                        "ifnotfixed" -> ActionType.IFNOTFIXED
                         "gosub" -> ActionType.GOSUB
                         "goto" -> ActionType.GOTO
                         "gosubrandom" -> ActionType.GOSUBRANDOM
@@ -312,6 +327,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                         "label" -> ActionType.LABEL
                         "ghost" -> ActionType.GHOST
                         "nop" -> ActionType.NOP
+                        "shell" -> ActionType.SHELL
                         else -> null
                     }
 
@@ -354,7 +370,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
             pressActions[cleanTrigger] = currentEventActions.toList()
         } else if (name.contains("release", ignoreCase = true) || name.contains("drop", ignoreCase = true) || name.contains("fixdrop", ignoreCase = true)) {
             releaseActions[cleanTrigger] = currentEventActions.toList()
-        } else if (name.contains("in", ignoreCase = true) && !name.contains("initialize", ignoreCase = true) && !name.contains("begin", ignoreCase = true)) {
+        } else if (name.equals("in", ignoreCase = true)) {
             inActions[cleanTrigger] = snapRules.toList()
             inEventActions[cleanTrigger] = currentEventActions.toList()
         } else if (name.contains("collide", ignoreCase = true)) {
@@ -615,6 +631,8 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 "movebyy" -> ActionType.MOVEBYY
                 "timer" -> ActionType.TIMER
                 "altmap" -> ActionType.ALTMAP
+                "ifmapped" -> ActionType.IFMAPPED
+                "ifnotmapped" -> ActionType.IFNOTMAPPED
                 "sound" -> ActionType.SOUND
                 "music" -> ActionType.MUSIC
                 "notify" -> ActionType.NOTIFY
@@ -622,6 +640,8 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 "changeset" -> ActionType.CHANGESET
                 "setfix" -> ActionType.SETFIX
                 "unfix" -> ActionType.UNFIX
+                "iffixed" -> ActionType.IFFIXED
+                "ifnotfixed" -> ActionType.IFNOTFIXED
                 "gosub" -> ActionType.GOSUB
                 "goto" -> ActionType.GOTO
                 "gosubrandom" -> ActionType.GOSUBRANDOM
@@ -629,6 +649,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 "label" -> ActionType.LABEL
                 "ghost" -> ActionType.GHOST
                 "nop" -> ActionType.NOP
+                "shell" -> ActionType.SHELL
                 else -> null
             }
 

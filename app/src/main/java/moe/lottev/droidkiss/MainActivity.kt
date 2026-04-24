@@ -101,6 +101,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.LinkAnnotation
@@ -594,6 +595,18 @@ fun DollCanvas(doll: KissDoll, viewModel: ViewModel, graphicsLayer: GraphicsLaye
     @Suppress("unused", "UnusedVariable")
     val trigger = viewModel.refreshTrigger
 
+    // For shell events
+    val uriHandler = LocalUriHandler.current
+    LaunchedEffect(Unit) {
+        viewModel.eventFlow.collect { event ->
+            when (event) {
+                is ShellEvent.OpenLink -> {
+                    uriHandler.openUri(event.url)
+                }
+            }
+        }
+    }
+
     // Remembers the object being dragged
     var activeDraggingId by remember { mutableStateOf<Int?>(null) }
     val hapticFeedback = LocalHapticFeedback.current
@@ -626,7 +639,6 @@ fun DollCanvas(doll: KissDoll, viewModel: ViewModel, graphicsLayer: GraphicsLaye
             ) { // Keys ensure it resets when set changes
                 detectDragGestures (
                     onDragStart = { offset ->
-
                         val tapX = offset.x / scale
                         val tapY = offset.y / scale
 
@@ -666,33 +678,34 @@ fun DollCanvas(doll: KissDoll, viewModel: ViewModel, graphicsLayer: GraphicsLaye
                             val isGroupFixed = doll.layers.any {
                                 it.descriptor.objectId == id && it.descriptor.isFixed
                             }
-                            if (isGroupFixed) return@detectDragGestures
 
-                            val minBaseX = objectLayers.minOf { it.x }
-                            val minBaseY = objectLayers.minOf { it.y }
-                            val maxBaseX = objectLayers.maxOf { it.x + it.bitmap.width }
-                            val maxBaseY = objectLayers.maxOf { it.y + it.bitmap.height }
+                            if (!isGroupFixed) {
+                                val minBaseX = objectLayers.minOf { it.x }
+                                val minBaseY = objectLayers.minOf { it.y }
+                                val maxBaseX = objectLayers.maxOf { it.x + it.bitmap.width }
+                                val maxBaseY = objectLayers.maxOf { it.y + it.bitmap.height }
 
-                            // Define the Walls based on the group's "Footprint"
-                            // We use minBaseX/Y to ensure the top-most/left-most cel
-                            // stops at the edge of the screen.
-                            val minAllowedOffsetH = -minBaseX.toFloat()
-                            val minAllowedOffsetV = -minBaseY.toFloat()
-                            val maxAllowedOffsetH = (doll.envWidth - maxBaseX).toFloat()
-                            val maxAllowedOffsetV = (doll.envHeight - maxBaseY).toFloat()
+                                // Define the Walls based on the group's "Footprint"
+                                // We use minBaseX/Y to ensure the top-most/left-most cel
+                                // stops at the edge of the screen.
+                                val minAllowedOffsetH = -minBaseX.toFloat()
+                                val minAllowedOffsetV = -minBaseY.toFloat()
+                                val maxAllowedOffsetH = (doll.envWidth - maxBaseX).toFloat()
+                                val maxAllowedOffsetV = (doll.envHeight - maxBaseY).toFloat()
 
-                            // Update the Offset
-                            // We use the same clamp for the WHOLE ID group.
-                            viewModel.currentOffsets[id] = Offset(
-                                totalAccumulatedX.coerceIn(
-                                    minOf(minAllowedOffsetH, maxAllowedOffsetH),
-                                    maxOf(minAllowedOffsetH, maxAllowedOffsetH)
-                                ),
-                                totalAccumulatedY.coerceIn(
-                                    minOf(minAllowedOffsetV, maxAllowedOffsetV),
-                                    maxOf(minAllowedOffsetV, maxAllowedOffsetV)
+                                // Update the Offset
+                                // We use the same clamp for the WHOLE ID group.
+                                viewModel.currentOffsets[id] = Offset(
+                                    totalAccumulatedX.coerceIn(
+                                        minOf(minAllowedOffsetH, maxAllowedOffsetH),
+                                        maxOf(minAllowedOffsetH, maxAllowedOffsetH)
+                                    ),
+                                    totalAccumulatedY.coerceIn(
+                                        minOf(minAllowedOffsetV, maxAllowedOffsetV),
+                                        maxOf(minAllowedOffsetV, maxAllowedOffsetV)
+                                    )
                                 )
-                            )
+                            }
                         }
                     },
                     onDragEnd = {

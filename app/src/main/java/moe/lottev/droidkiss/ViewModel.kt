@@ -24,6 +24,8 @@ import androidx.compose.material3.SnackbarResult
 import androidx.lifecycle.AndroidViewModel
 import kotlinx.coroutines.withContext
 import kotlin.text.contains
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 /** This is the viewmodel. A viewmodel bridges backend functionality with the frontend (see MainActivity.kt). */
 class ViewModel(application: Application) :
@@ -128,7 +130,6 @@ class ViewModel(application: Application) :
     private fun startHeartbeat() {
         heartbeatJob?.cancel()
         heartbeatJob = viewModelScope.launch(Dispatchers.Default) {
-
             while (isActive) {
                 val toFire = mutableListOf<Int>()
 
@@ -475,8 +476,11 @@ class ViewModel(application: Application) :
                 val bitmapWidth = anchorLayer.bitmap.width
                 val bitmapHeight = anchorLayer.bitmap.height
 
-                val distanceX = sqrt(currentVisualX - anchorVisualX).toDouble().pow(2.0)
-                val distanceY = sqrt(currentVisualY - anchorVisualY).toDouble().pow(2.0)
+                val offsetX = anchorLayer.descriptor.celOffsetX
+                val offsetY = anchorLayer.descriptor.celOffsetY
+
+                val distanceX = sqrt((currentVisualX - offsetX) - anchorVisualX).toDouble().pow(2.0)
+                val distanceY = sqrt((currentVisualY - offsetY) - anchorVisualY).toDouble().pow(2.0)
 
                 if (distanceX < bitmapWidth && distanceY < bitmapHeight) {
                     //  Convert Visual Target back to Compose Offset
@@ -585,6 +589,8 @@ class ViewModel(application: Application) :
         refreshTrigger++
     }
 
+    private val _eventFlow = MutableSharedFlow<ShellEvent>()
+    val eventFlow = _eventFlow.asSharedFlow()
     /**
      * Consolidated action executor.
      */
@@ -601,6 +607,62 @@ class ViewModel(application: Application) :
                 }
                 ActionType.ALTMAP -> {
                     altMappingStrict(action.target)
+                    return true
+                }
+
+                ActionType.IFMAPPED -> {
+                    val doll = currentDoll ?: return true
+
+                    doll.layers.forEach { layer ->
+                        val desc = layer.descriptor
+                        if (!desc.isUnmapped) {
+                            fireSpecialTimer(action)
+                        }
+                    }
+                    return true
+                }
+                ActionType.IFNOTMAPPED -> {
+                    val doll = currentDoll ?: return true
+
+                    doll.layers.forEach { layer ->
+                        val desc = layer.descriptor
+                        if (desc.isUnmapped) {
+                            fireSpecialTimer(action)
+                        }
+                    }
+                    return true
+                }
+                ActionType.IFFIXED -> {
+                    val target = action.target.replace("#", "").lowercase()
+                    val targetId = target.toIntOrNull()
+                    val targetLayer = currentDoll?.layers?.find { layer ->
+                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
+                        if (targetId != null) layer.descriptor.objectId == targetId else layerName == target
+                    }
+
+                    if (targetLayer != null) {
+                        val desc = targetLayer.descriptor
+                        if (desc.isFixed) {
+                            fireSpecialTimer(action)
+                        }
+                    }
+                    return true
+                }
+
+                ActionType.IFNOTFIXED -> {
+                    val target = action.target.replace("#", "").lowercase()
+                    val targetId = target.toIntOrNull()
+                    val targetLayer = currentDoll?.layers?.find { layer ->
+                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
+                        if (targetId != null) layer.descriptor.objectId == targetId else layerName == target
+                    }
+
+                    if (targetLayer != null) {
+                        val desc = targetLayer.descriptor
+                        if (!desc.isFixed) {
+                            fireSpecialTimer(action)
+                        }
+                    }
                     return true
                 }
                 ActionType.TIMER -> {
@@ -709,25 +771,31 @@ class ViewModel(application: Application) :
                         }
                     }
                     if (targetLayer != null || (targetId != null && targetId == 0)) targetLayer?.descriptor?.isFixed = false
+                    refreshTrigger++
                     return true
                 }
 
                 ActionType.SETFIX -> {
                     val target = action.target.replace("#", "").lowercase()
                     val targetId = target.toIntOrNull()
-                    val targetLayer = currentDoll?.layers?.find { layer ->
+                    val value = action.valueStr.toIntOrNull() ?: 0
+                    val shouldFix = value > 0
+
+                    currentDoll?.layers?.forEach { layer ->
                         val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
-                        if (targetId != null && !target.contains(".")) {
+
+                        // Match by ID OR by Filename (standard KiSS behavior)
+                        val isMatch = if (targetId != null && !target.contains(".")) {
                             layer.descriptor.objectId == targetId
                         } else {
                             layerName == target
                         }
-                    }
-                    val value = action.valueStr.toIntOrNull()
 
-                    if (targetLayer != null && value != null) {
-                        targetLayer.descriptor.isFixed = value > 0
+                        if (isMatch) {
+                            layer.descriptor.isFixed = shouldFix
+                        }
                     }
+                    refreshTrigger++
                     return true
                 }
 
@@ -794,6 +862,14 @@ class ViewModel(application: Application) :
                     return true
                 }
                 ActionType.NOP -> return true
+                ActionType.SHELL -> {
+                    // Only emit shell events when it's a URL or an email address
+                    val target = action.target.lowercase()
+                    if (target.startsWith("http://") || target.startsWith("https://") || target.startsWith(
+                            "www.") || target.startsWith("mailto:")) {
+                        executeShellEvent(action)
+                    }
+                }
                 ActionType.QUIT -> {
                     if (uiState is KissUiState.Loaded) {
                         uiState = KissUiState.Empty
@@ -1018,6 +1094,7 @@ class ViewModel(application: Application) :
         refreshTrigger++
     }
 
+    /** Executes any action under a label */
     fun executeLabelActions(labelNumStr: String) {
         val actions = configParser.labelActions[labelNumStr] ?: return
 
@@ -1029,6 +1106,13 @@ class ViewModel(application: Application) :
             }
         }
         refreshTrigger++
+    }
+
+    /** `shell()` events. Only work on web URLS and email addresses. */
+    fun executeShellEvent(action: KissAction) {
+        viewModelScope.launch {
+            _eventFlow.emit(ShellEvent.OpenLink(action.target))
+        }
     }
 
     // Track which objects are currently being "forced" visible by a press
@@ -1228,6 +1312,25 @@ class ViewModel(application: Application) :
             alarm.time = 0L
             alarm.enabled = true
         }
+        refreshTrigger++
+    }
+
+    /** Special timer for `iffixed`/`ifnotfixed`/`ifmapped`/`ifnotmapped` */
+    fun fireSpecialTimer(action: KissAction) {
+        val target = action.target.replace("#","").lowercase()
+        val id = action.valueStr.toIntOrNull() ?: return
+        val rawMs = action.extraValue.filter { it.isDigit() }
+        val ms = rawMs.toLongOrNull() ?: 0L
+
+        if (target.isNotEmpty()) {
+            synchronized(alarms) {
+                val alarm = alarms.getOrPut(id) { KissAlarm(id) }
+                alarm.delay = ms.toInt()
+                alarm.time = 0L
+                alarm.enabled = true // Enable ONLY this specific alarm
+            }
+        }
+
         refreshTrigger++
     }
 
