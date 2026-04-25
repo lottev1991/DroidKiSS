@@ -1,10 +1,10 @@
 <resources>
     <string name="app_name_caller">App name</string>
     <string name="app_info_btn">About the app</string>
-    <string name="load_doll">Load KiSS doll (.lzh)"</string>
+    <string name="load_doll">Load KiSS doll (.lzh, .zip)"</string>
     <string name="close_current_doll">Close current doll</string>
-    <string name="load_another_doll">Load another doll (.lzh)</string>
-    <string name="load_expansion_set">Load expansion set (.lzh)</string>
+    <string name="load_another_doll">Load another doll (.lzh, .zip)</string>
+    <string name="load_expansion_set">Load expansion set (.lzh, .zip)</string>
     <string name="select_cnf">Select configuration</string>
     <string name="take_doll_screenshot">Take doll screenshot</string>
     <string name="saved_screenshot_toast">Saved screenshot</string>

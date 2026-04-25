@@ -40,7 +40,7 @@ KiSS dolls are vintage digital dress up games, first developed in Japan all the 
 8. Audio (WAV, AU, MIDI) is supported.
 9. Typically, KiSS dolls are distributed by packaging every relevant file into an LZH archive.
 
-As you can see, KiSS mostly uses its own exclusive file types and standards. On top of that, it uses the archaic LZH format for compressing/packaging dolls. As a result, it is not a very accessible format for modern users. I hope to make it slightly more accessible with this app.
+As you can see, KiSS mostly uses its own exclusive file types and standards. On top of that, it traditionally used the archaic LZH format for compressing/packaging dolls. As a result, it is not a very accessible format for modern users. I hope to make it slightly more accessible with this app.
 
 ### One handy tip for using this app
 Long-pressing an object will "unfix" it if not draggable, and "fix" it if draggable. On desktop viewers, this is usually done through right-clicking the object and selecting "Unfix" and "Refix" from a context menu. Obviously, you can't right-click on a phone (and I thought a context menu would be overkill), so I utilized a simple long-press as a substitute.

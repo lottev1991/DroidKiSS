@@ -41,21 +41,29 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <!-- Handle common schemes -->
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+
+                <data android:mimeType="application/x-lzh" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
                 <data android:scheme="file" />
                 <data android:scheme="content" />
-
-                <!-- Associate by extension (using host and pathPattern) -->
                 <data android:host="*" />
+
                 <data android:pathPattern=".*\\.lzh" />
+
                 <data android:pathSuffix=".lzh"
                     tools:targetApi="31" />
-
-                <!-- It is also highly recommended to use a MIME type -->
-                <data android:mimeType="application/octet-stream" />
             </intent-filter>
         </activity>
     </application>
-
 
 </manifest>

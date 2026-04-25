@@ -5,6 +5,7 @@ import androidx.compose.runtime.*
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import android.content.Context
+import android.content.Intent
 import android.graphics.Rect
 import androidx.compose.ui.graphics.Color
 import android.net.Uri
@@ -187,8 +188,8 @@ class ViewModel(application: Application) :
     var availableCnfs by mutableStateOf<List<String>>(emptyList())
     val masterFileCache = mutableMapOf<String, ByteArray>()
 
-    /** Closes current LZH, returning to the main screen */
-    fun closeLzh() {
+    /** Closes current archive, returning to the main screen */
+    fun closeArchive() {
         if (currentDoll != null && uiState == KissUiState.Loaded(currentDoll!!)) {
             // Trigger any end() events if doll is loaded
             executeEvent("end")
@@ -292,7 +293,7 @@ class ViewModel(application: Application) :
     var selectedUri by mutableStateOf<Uri?>(null)
 
     /** Prepare LZH for multiple CNFs */
-    fun prepareLzh(context: Context, uri: Uri) {
+    fun prepareArchive(context: Context, uri: Uri) {
         viewModelScope.launch {
             // Use the engine to see how many CNFs are inside
             val cnfs = engine.discoverCnfs(uri)

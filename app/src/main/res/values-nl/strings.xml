@@ -2,10 +2,10 @@
 <resources>
     <string name="app_name_caller">Naam app</string>
     <string name="app_info_btn">Over de app</string>
-    <string name="load_doll">Laad KiSS Doll (.lzh)</string>
+    <string name="load_doll">Laad KiSS Doll (.lzh, .zip)</string>
     <string name="close_current_doll">Sluit huidige Doll</string>
-    <string name="load_another_doll">Laad een andere Doll (.lzh)</string>
-    <string name="load_expansion_set">Laad Expansion Set (.lzh)</string>
+    <string name="load_another_doll">Laad een andere Doll (.lzh, .zip)</string>
+    <string name="load_expansion_set">Laad Expansion Set (.lzh, .zip)</string>
     <string name="select_cnf">Selecteer configuratie</string>
     <string name="take_doll_screenshot">Maak Doll-screenshot</string>
     <string name="saved_screenshot_toast">Screenshot opgeslagen</string>

@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.launch
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -131,6 +132,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
  I also made the app translatable, this includes the content descriptions.
  */
 class MainActivity : ComponentActivity() {
+    private var fileUriState = mutableStateOf<Uri?>(null)
     private val viewModel: ViewModel by viewModels()
 
     /** Makes it so the app is always full screen, hiding the system UI upon load, focus and resume. You're still able to access the system UI by swiping up and/or down. */
@@ -154,6 +156,7 @@ class MainActivity : ComponentActivity() {
                 WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
 
         super.onCreate(savedInstanceState)
+        handleIntent(intent)
         window.attributes.layoutInDisplayCutoutMode =
             WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
 
@@ -180,22 +183,40 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = bgColor) {
                     val context = LocalContext.current
-                    val openLzhLauncher = rememberLauncherForActivityResult(
+                    val openArchiveLauncher = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.OpenDocument()
                     ) { uri: Uri? ->
                         uri?.let {
-                            viewModel.prepareLzh(context, it)
+                            viewModel.prepareArchive(context, uri)
                         }
                     }
                     DollScreen(
                         viewModel,
                         onLaunchPicker = {
-                            openLzhLauncher.launch(arrayOf("*/*"))
+                            openArchiveLauncher.launch(arrayOf("application/x-lzh", "application/zip", "application/octet-stream"))
                         },
                     )
                 }
             }
+        }
+    }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // IMPORTANT: Set the activity intent to the new one,
+        // otherwise handleIntent might read the old Uri.
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_VIEW) {
+            val uri = intent.data
+            if (uri != null) {
+                fileUriState.value = uri
+                // Trigger the actual loading logic
+                viewModel.prepareArchive(this, uri)
+            }
         }
     }
 
@@ -574,7 +595,7 @@ fun DollScreen(viewModel: ViewModel, onLaunchPicker: () -> Unit) {
                     Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center) {
                         Text("${stringResource(R.string.error)}: ${state.message}", color = MaterialTheme.colorScheme.error, fontSize = 20.sp)
-                        Button(onClick = { viewModel.closeLzh() },
+                        Button(onClick = { viewModel.closeArchive() },
                             border = BorderStroke(
                             1.dp,
                             MaterialTheme.colorScheme.onPrimary)) {
@@ -935,7 +956,9 @@ fun DollMenu(viewModel: ViewModel, onLaunchPicker: () -> Unit) {
                 onClick = {
                     expanded = false
                     viewModel.isExpansionSet = true
-                    expansionLauncher.launch(arrayOf("*/*"))
+                    expansionLauncher.launch(
+                        arrayOf("application/x-lzh", "application/zip", "application/octet-stream")
+                    )
                 }
             )
             DropdownMenuItem(
@@ -1016,7 +1039,7 @@ fun DollMenu(viewModel: ViewModel, onLaunchPicker: () -> Unit) {
                 text = { Text(stringResource(R.string.close_current_doll)) },
                 onClick = {
                     expanded = false
-                    viewModel.closeLzh()
+                    viewModel.closeArchive()
                 }
             )
             DropdownMenuItem(
