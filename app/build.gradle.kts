@@ -25,7 +25,7 @@ android {
         minSdk = 28
         targetSdk = 37
         versionCode = 1
-        versionName = "1.7-beta"
+        versionName = "1.8-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         signingConfig = signingConfigs.getByName("debug")
@@ -94,6 +94,7 @@ android {
     sourceSets {
         getByName("main") {
             assets {
+                @Suppress("DEPRECATION")
                 srcDirs("src/main/assets", "src/full/assets")
             }
         }

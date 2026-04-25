@@ -1,6 +1,6 @@
 package moe.lottev.droidkiss;
 
-// Special thanks to William Miles for his LZH archive logic.
+// Special thanks to William Miles for his archive extraction logic.
 // It would've been a headache to implement without the existence of UltraKiSS.
 // You can find the full UltraKiSS source code here:
 // https://github.com/kisekae/ultrakiss
@@ -93,19 +93,15 @@ public final class Lhhuf {
     private static final int UCHAR_MAX = 255;
     private static final int SHRT_MIN = 0x8000;
     private static final int SHRT_MAX = 0x7fff;
-    private static final int USHRT_MIN = 0x0;
     private static final int USHRT_MAX = 0xffff;
     private static final int NIL = 0;
     private static final int MAX_DICBIT = 16;
-    private static final int MAX_DICSIZ = (1 << MAX_DICBIT);
-    private static final int MATCHBIT = 8; /* bits for MAXMATCH - THRESHOLD */
     private static final int MAXMATCH = 256; /* formerly F (not more than UCHAR_MAX + 1) */
     private static final int THRESHOLD = 3; /* choose optimal value */
     /* alphabet = {0, 1, 2, ..., NC - 1} */
     private static final int CBIT = 9; /* $\lfloor \log_2 NC \rfloor + 1$ */
     private static final int NP = (MAX_DICBIT + 1);
     private static final int NT = (USHRT_BIT + 3);
-    private static final int PBIT = 5;    /* smallest integer such that (1 << PBIT) > * NP */
     private static final int TBIT = 5;        /* smallest integer such that (1 << TBIT) > * NT */
     private static final int NC = (UCHAR_MAX + MAXMATCH + 2 - THRESHOLD);
     private static final int NPT = 0x80;
@@ -121,6 +117,7 @@ public final class Lhhuf {
     int sort;
     private int bytes = 0;          /* bytes processed */
     private int lastbytes = 0;      /* last bytes processed */
+    @SuppressWarnings("FieldMayBeFinal")
     private FileWriter fw = null;   /* FileWriter to track progress */
     private InputStream in;
     private int pos, matchpos, avail;
@@ -133,9 +130,10 @@ public final class Lhhuf {
     private int max_hash_val;
     private int hash1, hash2;
     private int dicbit;
-    private int encoded_origsize, compsize, count, crc;
+    private int compsize;
+    private int count;
+    private int crc;
     private boolean unpackable;
-    private int k;
     private int n;
     private int heapsize;
     private final int[] heap = new int[NC + 1];
@@ -169,23 +167,10 @@ public final class Lhhuf {
     private int origsize;
     private int bitbuf;
     private OutputStream out;
-    private int prev_char;
+    @SuppressWarnings("FieldCanBeLocal")
     private int loc;
-    private boolean eof;
     public Lhhuf(int origsize, int method) {
         init(origsize, method);
-    }
-
-    public int CRC() {
-        return crc;
-    }
-
-    public void setCRC(int crc) {
-        this.crc = crc;
-    }
-
-    private void updatecrc(int ch) {
-        crc = LhaCrc16.crctable[(crc ^ (ch)) & 0xFF] ^ (crc >> CHAR_BIT);
     }
 
     private int fread_crc(byte[] b, int start, int count, InputStream in)
@@ -194,16 +179,13 @@ public final class Lhhuf {
         while (count-- != 0) {
             int ch = in.read();
             if (ch < 0) {
-                eof = true;
                 return i;
             }
             int progress = ++bytes - lastbytes;
             if (fw != null && progress > 1024) {
-                //fw.updateProgress(progress) ;
                 lastbytes = bytes;
             }
             b[start++] = (byte) ch;
-            //	updatecrc(ch);
             crc = LhaCrc16.crctable[(crc ^ (ch)) & 0xFF] ^ (crc >> CHAR_BIT);
 
             i++;
@@ -212,14 +194,13 @@ public final class Lhhuf {
         return i;
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     private int fwrite_crc(byte[] b, int start, int count, OutputStream out)
             throws IOException {
         int i = 0;
         int ch;
         while (count-- != 0) {
-            // PrintLn.println(">" + b[start]);
             out.write(ch = b[start++]);
-            //	updatecrc(ch);
             crc = LhaCrc16.crctable[(crc ^ (ch)) & 0xFF] ^ (crc >> CHAR_BIT);
 
             i++;
@@ -228,14 +209,7 @@ public final class Lhhuf {
         return i;
     }
 
-    long length() {
-        return compsize;
-    }
-
-    long size() {
-        return size;
-    }
-
+    @SuppressWarnings("SameParameterValue")
     private void memset(byte[] b, int start, int ch, int count) {
         while (count-- != 0) {
             b[start++] = (byte) ch;
@@ -253,10 +227,8 @@ public final class Lhhuf {
         this.origsize = origsize;
         maxmatch = MAXMATCH;
         dicsiz = 1 << dicbit;
-        //   PrintLn.println(dicsiz);
 
         max_hash_val = 3 * dicsiz + (dicsiz / 512 + 1) * UCHAR_MAX;
-        //   PrintLn.println(max_hash_val);
 
         text = new byte[dicsiz * 2 + maxmatch];
         level = new int[(dicsiz + UCHAR_MAX + 1)];
@@ -286,10 +258,6 @@ public final class Lhhuf {
         hash2 = dicsiz * 2;
     }
 
-    private int HASH(int p, int c) {
-        return (((p) + ((c) << hash1) + hash2)) & 0xffff;
-    }
-
     private int child(int q, int c) {
         int h, r;
 
@@ -306,10 +274,7 @@ public final class Lhhuf {
     private void makechild(int q, int c, int r) {
         int h, t;
 
-        //     h = HASH(q, c);
         h = (((q) + ((c) << hash1) + hash2)) & 0xffff;
-
-        //     PrintLn.println(k++ + "makechild:(" + q + "," + c + "," + r + ")" + h + "," + childcount[q]);
 
         t = next[h];
         next[h] = r;
@@ -322,8 +287,6 @@ public final class Lhhuf {
 
     private void split(int old) {
         int newval, t;
-
-        //     PrintLn.println("split(" + old + ") " + avail);
 
         newval = avail;
         avail = next[newval];
@@ -474,11 +437,9 @@ public final class Lhhuf {
         int n;
         remainder--;
         if (++pos == dicsiz * 2) {
-            //       PrintLn.println("get_next_match");
 
             System.arraycopy(text, dicsiz, text, 0, dicsiz + maxmatch);
             n = fread_crc(text, dicsiz + maxmatch, dicsiz, in);
-            encoded_origsize += n;
             remainder += n;
             pos = dicsiz;
             if (n == 0) return;
@@ -487,6 +448,7 @@ public final class Lhhuf {
         insert_node();
     }
 
+    @SuppressWarnings("unused")
     void encode(InputStream in, OutputStream out) throws IOException {
         this.in = in;
         this.out = out;
@@ -503,31 +465,26 @@ public final class Lhhuf {
         pos = dicsiz + maxmatch;
         memset(text, pos, ' ', dicsiz);
         remainder = fread_crc(text, pos, dicsiz, in);
-        encoded_origsize = remainder;
         matchlen = 0;
         insert_node();
-//		      PrintLn.println("Lhhuf: remainder="+remainder + unpackable);
         while (remainder > 0 && !unpackable) {
             lastmatchlen = matchlen;
             lastmatchpos = matchpos;
             get_next_match();
-//				PrintLn.println("Lhhuf: here");
 
-            int x, y;
             if (matchlen > remainder)
                 matchlen = remainder;
             if (matchlen > lastmatchlen || lastmatchlen < THRESHOLD) {
-                encode_output(x = textbuf(pos - 1), y = 0);
-//				          PrintLn.println("Lhhuf: -x=" + x + "y=" + y);
+                encode_output(textbuf(pos - 1));
                 count++;
             } else {
                 //       encode_output
-                output_st1(x = lastmatchlen + (UCHAR_MAX + 1 - THRESHOLD),
-                        y = (pos - lastmatchpos - 2) & dicsiz1);
-//				          PrintLn.println("Lhhuf: +x=" + x + "y=" + y);
+                output_st1(lastmatchlen + (UCHAR_MAX + 1 - THRESHOLD),
+                        (pos - lastmatchpos - 2) & dicsiz1);
 
                 while (--lastmatchlen > 0) {
                     if (lastmatchlen == 30)
+                        //noinspection DataFlowIssue,ReassignedVariable,SillyAssignment
                         lastmatchlen = lastmatchlen;
                     get_next_match();
                     count++;
@@ -535,22 +492,19 @@ public final class Lhhuf {
                 if (matchlen > remainder)
                     matchlen = remainder;
             }
-//				PrintLn.println("Lhhuf: remainder=" + remainder);
             if (remainder == 479)
+                //noinspection DataFlowIssue,SillyAssignment
                 remainder = remainder;
         }
         encode_end();
-        //     in.close();
-        //     out.close();
-        //if (fw != null) fw.updateProgress(bytes-lastbytes) ;
     }
 
-    private void encode_start() throws IOException {
+    private void encode_start() {
         encode_start_st1();
     }
 
-    private void encode_output(int x, int y) throws IOException {
-        output_st1(x, y);
+    private void encode_output(int x) throws IOException {
+        output_st1(x, 0);
     }
 
     /* encode */
@@ -564,7 +518,6 @@ public final class Lhhuf {
         int[] start = new int[17];    /* start code */
         int j, k;
         int i;
-        //       PrintLn.println("make_code(" + n + ")");
 
         j = 0;
         k = 1 << (16 - 1);
@@ -581,9 +534,8 @@ public final class Lhhuf {
     }
 
     private void count_len(int i)            /* call with i = root */ {
-        //       PrintLn.println("count_len("+i+")");
         if (i < n)
-            len_cnt[depth < 16 ? depth : 16]++;
+            len_cnt[Math.min(depth, 16)]++;
         else {
             depth++;
             count_len(left[i]);
@@ -595,7 +547,6 @@ public final class Lhhuf {
     private void make_len(int root) {
         int i, k;
         int cum;
-        //       PrintLn.println("make_len(" + root + ")");
 
         for (i = 0; i <= 16; i++)
             len_cnt[i] = 0;
@@ -635,7 +586,6 @@ public final class Lhhuf {
         int j, k;
 
         k = heap[i];
-        //     PrintLn.println("downheap(" + i + ")->"+k);
 
         while ((j = 2 * i) <= heapsize) {
             if (j < heapsize && freq[heap[j]] > freq[heap[j + 1]])
@@ -646,14 +596,12 @@ public final class Lhhuf {
             i = j;
         }
         heap[i] = k;
-        //     PrintLn.println("downheap(" + i + ")<-"+k);
     }
 
     private int make_tree(int nparm, int[] freqparm, int[] lenparm, int[] codeparm)
         /* make tree, calculate len[], return root */ {
         int i, j, k, available;
 
-        //     PrintLn.println("nparm=" + nparm);
         n = nparm;
         freq = freqparm;
         len = lenparm;
@@ -681,9 +629,7 @@ public final class Lhhuf {
             if (i < n)
                 sorta[sort++] = i;
             heap[1] = heap[heapsize--];
-            //       PrintLn.println("heapsize=" + heapsize + "," + heap[heapsize+1]);
             downheap(1);
-            //       PrintLn.println("=" + heap[1]);
             j = heap[1];    /* next least-freq entry */
             if (j < n)
                 sorta[sort++] = j;
@@ -691,7 +637,6 @@ public final class Lhhuf {
             freq[k] = freq[i] + freq[j];
             heap[1] = k;
             downheap(1);    /* put into queue */
-            //       PrintLn.println("k="+k+"i="+i+"j="+j);
             left[k] = i;
             right[k] = j;
         } while (heapsize > 1);
@@ -768,11 +713,10 @@ public final class Lhhuf {
                             right[available] = left[available] = 0;
                             tbl[p] = available++;
                         }
+                        p = tbl[p];
                         if ((i & 0x8000) != 0) {
-                            p = tbl[p];
                             tbl = right;
                         } else {
-                            p = tbl[p];
                             tbl = left;
                         }
                         i <<= 1;
@@ -796,8 +740,6 @@ public final class Lhhuf {
 
     private void count_t_freq(/*void*/) {
         int i, k, n, count;
-
-        //     PrintLn.println("count_t_freq>");
 
         for (i = 0; i < NT; i++)
             t_freq[i] = 0;
@@ -825,11 +767,9 @@ public final class Lhhuf {
             } else
                 t_freq[k + 2]++;
         }
-        //     PrintLn.println("count_t_freq<");
     }
 
     private void write_pt_len(int n, int nbit, int i_special) throws IOException {
-        //     PrintLn.println("write_pt_len("+n+","+nbit+","+i_special+")");
 
         int i, k;
 
@@ -849,13 +789,9 @@ public final class Lhhuf {
                 putbits(2, i - 3);
             }
         }
-
-        //     PrintLn.println("write_pt_len<");
     }
 
     private void write_c_len(/*void*/) throws IOException {
-        //     PrintLn.println("write_c_len>");
-
         int i, k, n, count;
 
         n = NC;
@@ -889,17 +825,13 @@ public final class Lhhuf {
                 putcode(pt_len[k + 2], pt_code[k + 2]);
             }
         }
-        //     PrintLn.println("write_c_len<");
     }
 
     private void encode_c(int c) throws IOException {
-        //     PrintLn.println("encode_c>");
         putcode(c_len[c], c_code[c]);
-        //     PrintLn.println("encode_c<");
     }
 
     private void encode_p(int p) throws IOException {
-        //     PrintLn.println("encode_p>" + p);
         int c, q;
 
         c = 0;
@@ -911,18 +843,13 @@ public final class Lhhuf {
         putcode(pt_len[c], pt_code[c]);
         if (c > 1)
             putbits(c - 1, p);
-
-        //     PrintLn.println("encode_p<");
     }
 
     private void send_block() throws IOException {
-        //     PrintLn.println("send_block>");
-
         int flags = 0;
         int i, k, root, pos, size;
 
         root = make_tree(NC, c_freq, c_len, c_code);
-        //     PrintLn.println("root="+root);
 
         size = c_freq[root];
         putbits(16, size);
@@ -970,7 +897,6 @@ public final class Lhhuf {
             c_freq[i] = 0;
         for (i = 0; i < NP; i++)
             p_freq[i] = 0;
-        //     PrintLn.println("send_block<");
     }
 
     private void output_st1(int c, int p) throws IOException {
@@ -988,10 +914,8 @@ public final class Lhhuf {
         }
         buf[output_pos++] = (byte) c;
         c_freq[c]++;
-        //     PrintLn.println("c_freq[" + c + "]=" + (c_freq[c]-1));
-
         if (c >= (1 << CHAR_BIT)) {
-            buf[cpos] |= output_mask;
+            buf[cpos] |= (byte) output_mask;
             buf[output_pos++] = (byte) (p >>> CHAR_BIT);
             buf[output_pos++] = (byte) p;
             c = 0;
@@ -1062,7 +986,6 @@ public final class Lhhuf {
                     }
                 }
                 fillbuf((c < 7) ? 3 : c - 3);
-                //	    PrintLn.println(pt_len.length + " " + i);
                 pt_len[i++] = c;
                 if (i == i_special) {
                     c = getbits(2);
@@ -1197,20 +1120,13 @@ public final class Lhhuf {
                 compsize--;
             int ch = in.read();
             if (ch < 0) {
-                eof = true;
                 ch = 0;
             }
             int progress = ++bytes - lastbytes;
             if (fw != null && progress > 1024) {
-                //fw.updateProgress(progress) ;
                 lastbytes = bytes;
             }
-            //	    PrintLn.println(ch);
             subbitbuf = ch;
-            //	  }
-            //	  else {
-            //	    subbitbuf = 0;
-            //	  }
             bitcount = CHAR_BIT;
         }
         bitcount -= n;
@@ -1218,37 +1134,25 @@ public final class Lhhuf {
         bitbuf &= 0xffff;
         subbitbuf <<= n;
         subbitbuf &= 0xff;
-        //	PrintLn.println(bitbuf);
     }
 
     private int getbits(int n) throws IOException {
         int x;
 
         x = bitbuf >>> (2 * CHAR_BIT - n);
-        //     x &= 0xffff;
         fillbuf(n);
-        //     PrintLn.println("<-getbits " + x);
         return x;
     }
 
     /* Write rightmost n bits of x */
     private void putcode(int n, int x) throws IOException {
-        //     PrintLn.println("putcode(" + n + "," + x + ")");
-        //     PrintLn.println(bitcount);
-
         while (n >= bitcount) {
             n -= bitcount;
             subbitbuf += (x >>> (USHRT_BIT - bitcount));
             x <<= bitcount;
             x &= 0xffff;
-
-            //	if (compsize < origsize) {
-            //         PrintLn.println("putcode(" + n + "," + x + ")->" + (subbitbuf&0xff));
             out.write(subbitbuf);
             compsize++;
-            //	}
-            //	else
-            //	  unpackable = true;
             subbitbuf = 0;
             bitcount = CHAR_BIT;
         }
@@ -1258,7 +1162,6 @@ public final class Lhhuf {
 
     /* Write rightmost n bits of x */
     private void putbits(int n, int x) throws IOException {
-        //     PrintLn.println("putbits(" + n + "," + x + ") "+bitcount);
         x <<= USHRT_BIT - n;
         x &= 0xffff;
         while (n >= bitcount) {
@@ -1266,13 +1169,8 @@ public final class Lhhuf {
             subbitbuf += (x >>> (USHRT_BIT - bitcount));
             x <<= bitcount;
             x &= 0xffff;
-            //	if (compsize < origsize) {
             out.write(subbitbuf);
-            //         PrintLn.println("putbits(" + n + "," + x + ")->"+(subbitbuf&0xff));
             compsize++;
-            //	}
-            //	else
-            //	  unpackable = true;
             subbitbuf = 0;
             bitcount = CHAR_BIT;
         }
@@ -1309,10 +1207,8 @@ public final class Lhhuf {
         this.out = out;
 
         int i, j, k, c, dicsiz1, offset;
-        //     PrintLn.println("decode");
 
         crc = 0;
-        prev_char = -1;
         dicsiz = 1 << dicbit;
         text = new byte[dicsiz];
         memset(text, 0, ' ', dicsiz);
@@ -1321,13 +1217,10 @@ public final class Lhhuf {
         offset = 0x100 - 3;
         count = 0;
         loc = 0;
-//		for (;;)
         while (count < origsize) {
             c = decode_c();
-            //       PrintLn.println(loc + "=" + c);
 
             if (c <= UCHAR_MAX) {
-//				if (eof) break;
                 text[loc++] = (byte) c;
                 if (loc == dicsiz) {
                     fwrite_crc(text, 0, dicsiz, out);
@@ -1346,17 +1239,10 @@ public final class Lhhuf {
                         loc = 0;
                     }
                 }
-//				if (eof) break;
             }
         }
         if (loc != 0) {
             fwrite_crc(text, 0, loc, out);
         }
     }
-
-    void setFileWriter(FileWriter f) {
-        fw = f;
-    }
 }
-
-

@@ -1,6 +1,6 @@
 package moe.lottev.droidkiss;
 
-// Special thanks to William Miles for his LZH archive logic.
+// Special thanks to William Miles for his archive extraction logic.
 // It would've been a headache to implement without the existence of UltraKiSS.
 // You can find the full UltraKiSS source code here:
 // https://github.com/kisekae/ultrakiss
@@ -52,7 +52,6 @@ package moe.lottev.droidkiss;
 
 // Copyright (C) Todo Software All rights reserved.  1997
 // CRC16
-
 public final class LhaCrc16 {
     public static final int[] crctable = {
             0x0,
@@ -93,19 +92,22 @@ public final class LhaCrc16 {
     static final int UCHAR_MAX = 255;
     static final int CRCPOLY = 0xA001;
 
+    @SuppressWarnings("unused")
     public static int calcCRC(byte[] b) {
         int val;
         int crc = 0;
-        for (int i = 0; i < b.length; i++) {
-            crc = crctable[(crc ^ (b[i])) & 0xFF] ^ (crc >> 8);
+        for (byte value : b) {
+            crc = crctable[(crc ^ value) & 0xFF] ^ (crc >> 8);
         }
         return crc & 0xffff;
     }
 
+    @SuppressWarnings({"unused", "UnusedAssignment"})
     static int nextCRC(int crc, int ch) {
         return crc = crctable[(crc ^ (ch)) & 0xFF] ^ (crc >> CHAR_BIT);
     }
 
+    @SuppressWarnings("unused")
     void makecrc( /* void */) {
         int i, j, r;
 
@@ -116,7 +118,6 @@ public final class LhaCrc16 {
                     r = (r >>> 1) ^ CRCPOLY;
                 else
                     r >>>= 1;
-//			crctable[i] = r;
         }
     }
 }

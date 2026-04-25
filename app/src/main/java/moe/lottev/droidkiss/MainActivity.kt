@@ -505,7 +505,7 @@ fun DollScreen(viewModel: ViewModel, onLaunchPicker: () -> Unit) {
                         viewModel.loadExpansionSet(context, uri, selectedCnf)
                         viewModel.isExpansionSet = false
                     } else {
-                        viewModel.loadLzh(context, uri, selectedCnf)
+                        viewModel.loadArchive(context, uri, selectedCnf)
                     }
 
                 }
@@ -795,10 +795,6 @@ fun DollCanvas(doll: KissDoll, viewModel: ViewModel, graphicsLayer: GraphicsLaye
 
                                     if (currentlyFixed) {
                                         viewModel.executeUnfixActions(hitLayer)
-                                    }
-
-                                    if (!currentlyFixed) {
-                                        viewModel.executeSetFixActions(hitLayer)
                                     }
 
                                     waitForUpOrCancellation()

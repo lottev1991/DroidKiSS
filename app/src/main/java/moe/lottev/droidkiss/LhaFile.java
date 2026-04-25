@@ -1,6 +1,6 @@
 package moe.lottev.droidkiss;
 
-// Special thanks to William Miles for his LZH archive logic.
+// Special thanks to William Miles for his archive extraction logic.
 // It would've been a headache to implement without the existence of UltraKiSS.
 // You can find the full UltraKiSS source code here:
 // https://github.com/kisekae/ultrakiss
@@ -50,15 +50,15 @@ package moe.lottev.droidkiss;
 */
 
 
-/**
- * LhaFile class
- * <p>
- * Purpose:
- * <p>
- * This class manages an LHA compressed file.  It contains methods
- * to open and close the file and to return an enumeration of the
- * entries contained in the file.
- *
+/*
+  LhaFile class
+  <p>
+  Purpose:
+  <p>
+  This class manages an LHA compressed file.  It contains methods
+  to open and close the file and to return an enumeration of the
+  entries contained in the file.
+
  */
 
 import android.util.Log;
@@ -72,25 +72,8 @@ import java.util.zip.Checksum;
 public class LhaFile extends ArchiveFile {
     private RandomAccessFile file = null;        // LHA random access file object
 
-
-    // Constructor.  This method opens an LHA random access file for input
-    // and constructs a vector of LHA elements where each element represents
-    // a compressed file.
-    /* Adjusted for Android. */
-    public LhaFile(String name) throws IOException {
-        this(name, "r");
-    }
-
-
-    // Constructor.  This method opens a new zip file from a memory file.
-//   public LhaFile(String name, MemFile mem) throws IOException {
-//       memfile = mem;
-//       pathname = name;
-//       contents = new Vector();
-//       open();
-//   }
-
     // Primary Android Constructor
+    @SuppressWarnings("rawtypes")
     public LhaFile(String name, MemFile mem) throws IOException {
         this.pathname = name;
         this.memfile = mem;
@@ -100,23 +83,10 @@ public class LhaFile extends ArchiveFile {
         open();
     }
 
-
-    // Constructor.  This method opens a new LHA file in the specified mode.
-
-    public LhaFile(String name, String mode) throws IOException {
-        pathname = name;
-        init();
-        if ("rw".equals(mode)) file = new RandomAccessFile(pathname, mode);
-        else open();
-    }
-
-
     // Return the random access file.
-
     RandomAccessFile getRandomAccessFile() {
         return file;
     }
-
 
     // ArchiveFile abstract method implementations
     // -------------------------------------------
@@ -159,9 +129,10 @@ public class LhaFile extends ArchiveFile {
             open = true;
         } catch (IOException e) {
             Log.e("KiSS_JAVA", "Open failed at entry: " + e.getMessage());
+            //noinspection CallToPrintStackTrace
             e.printStackTrace(); // THIS WILL TELL US THE EXACT LINE IN LHAENTRY
             // If we found NO entries, then it's a truly invalid LZH
-            if (contents == null || contents.size() == 0) {
+            if (contents == null || contents.isEmpty()) {
                 throw new IOException("Invalid LZH archive: No entries found. " + e.getMessage());
             }
             // Otherwise, we just hit the end of the file slightly messily
@@ -169,26 +140,23 @@ public class LhaFile extends ArchiveFile {
         }
     }
 
-
-
     // Returns an input stream for reading the uncompressed contents of
     // the specified LHA file entry.
-
     public InputStream getInputStream(ArchiveEntry le) throws IOException {
         if (!isOpen()) return null;
         if (!(le instanceof LhaEntry)) return null;
-        byte[] buf = null;
+        byte[] buf;
         ByteArrayOutputStream out = null;
         InputStream in = ((LhaEntry) le).getCompressedInputStream();
 
         // Uncompress the data.  We uncompress all the data to a memory buffer
         // and then return an input stream that can be used to read the contents
         // of the buffer.
-
         try {
-            switch (((LhaEntry) le).getMethod()) {
+            switch (le.getMethod()) {
                 case LhaEntry.LH0:
                     buf = new byte[(int) le.getSize()];
+                    //noinspection ResultOfMethodCallIgnored
                     in.read(buf, 0, (int) le.getSize());
                     ((LhaEntry) le).setCrc32(computeCRC32(buf));
                     in.close();
@@ -205,7 +173,7 @@ public class LhaFile extends ArchiveFile {
                 case LhaEntry.LH6:
                 case LhaEntry.LH7:
                     out = new ByteArrayOutputStream((int) le.getSize());
-                    (new Lhhuf((int) le.getSize(), ((LhaEntry) le).getMethod())).decode(in, out);
+                    (new Lhhuf((int) le.getSize(), le.getMethod())).decode(in, out);
                     buf = out.toByteArray();
                     ((LhaEntry) le).setCrc32(computeCRC32(buf));
                     in.close();
@@ -219,27 +187,16 @@ public class LhaFile extends ArchiveFile {
         }
 
         // Catch general Exceptions and prefix by element name.
-
         catch (Exception e) {
             if (in != null) in.close();
             if (out != null) out.close();
-            String name = (le != null) ? le.getName() : null;
+            String name = le.getName();
             name = (name == null) ? "" : name + " ";
             throw new IOException(name + e.getMessage());
         }
     }
 
-
-    // Returns an output stream for writing the compressed contents of
-    // the specified LHA file.
-
-    OutputStream getOutputStream(ArchiveEntry le) throws IOException {
-        return new LhaOutputStream(this);
-    }
-
-
     // Close the LHA random access file only if no media connections exist.
-
     void close() throws IOException {
         if (connections > 0) return;
         if (file != null) file.close();
@@ -251,14 +208,12 @@ public class LhaFile extends ArchiveFile {
 
 
     // Release the LHA contents reference.
-
     void flush() {
         contents = null;
     }
 
 
     // Returns the file open state.
-
     boolean isOpen() {
         Object o = getRandomAccessFile();
         if (o != null) return true;
@@ -268,7 +223,6 @@ public class LhaFile extends ArchiveFile {
 
 
     // Calculate the CRC32 of the LHA entry.
-
     long computeCRC32(byte[] buf) {
         Checksum crc32 = new CRC32();
         crc32.update(buf, 0, buf.length);

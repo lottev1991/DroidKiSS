@@ -1,6 +1,6 @@
 package moe.lottev.droidkiss;
 
-// Special thanks to William Miles for his LZH archive logic.
+// Special thanks to William Miles for his archive extraction logic.
 // It would've been a headache to implement without the existence of UltraKiSS.
 // You can find the full UltraKiSS source code here:
 // https://github.com/kisekae/ultrakiss
@@ -50,31 +50,21 @@ package moe.lottev.droidkiss;
 */
 
 
-/**
- * DirEntry class
- * <p>
- * Purpose:
- * <p>
- * Objects of this class are directory file elements.
- *
+/*
+  DirEntry class
+  <p>
+  Purpose:
+  <p>
+  Objects of this class are directory file elements.
+
  */
 
 import java.io.*;
-import java.util.zip.CRC32;
-import java.util.zip.Checksum;
 
 public final class DirEntry extends ArchiveEntry {
-    static final public int UNCOMPRESSED = 0;  // Compression method code
-    static final public int COMPRESSED = 1;    // Compression method code
-
     private File file = null;                    // File object
-    private int method = 0;                    // Compression method
-    private long crc32 = -1;                    // 32 bit CRC of uncompressed file
-    private long filesize = -1;           // uncompressed size of file
-    private long lastmodified = 0;        // last modified time of file
 
     // Constructor
-
     public DirEntry(String directory, String name, ArchiveFile af) {
         archive = af;
         filename = convertSeparator(name);
@@ -85,28 +75,10 @@ public final class DirEntry extends ArchiveEntry {
         pathname = file.getPath();
     }
 
-    // Constructor to encalsulate a memory file
-
-    public DirEntry(MemFile mem) {
-        archive = null;
-        dirname = null;
-        filename = null;
-        if (mem == null) return;
-        memfile = mem;
-        filename = memfile.getFileName();
-        pathname = memfile.getFileName();
-    }
-
-    public DirEntry(String name) {
-        this(null, name, null);
-    }
-
-
     // Return an input stream for this file element.
-
     public InputStream getInputStream() throws IOException {
         if (memfile != null) return memfile.getInputStream();
-        InputStream is = null;
+        InputStream is;
         File streamsource = file;
         if (isImported() && importpath != null)
             streamsource = new File(importpath);
@@ -119,29 +91,11 @@ public final class DirEntry extends ArchiveEntry {
         return new BufferedInputStream(is, 4096);
     }
 
-
-    // Return an output stream for this file element.
-
-    public OutputStream getOutputStream() throws IOException {
-        if (file == null) return null;
-        return new FileOutputStream(file);
-    }
-
-
     // Return the size of the file.
-
     long getSize() {
         if (memfile != null) return memfile.getSize();
         if (file == null) return -1;
-//   if (copy) return 0 ;
-        if (filesize >= 0) return filesize;
         return file.length();
-    }
-
-    // Return the memory file.
-
-    MemFile getMemoryFile() {
-        return memfile;
     }
 
     // Return the compressed size of the file.
@@ -151,79 +105,22 @@ public final class DirEntry extends ArchiveEntry {
     }
 
     // Return the specified compression method.
-
     int getMethod() {
-        return method;
-    }
-
-    // Return the calculated CRC32 value.
-
-    void setMethod(int m) {
-        method = m;
-    }
-
-    // Set the required compression method.
-
-    long getCrc32() {
-        return crc32;
-    }
-
-    // Set the file size for edited memory type CNF files.
-
-    void setCrc32(long crc) {
-        crc32 = crc;
-    }
-
-    // Set the uncompressed CRC32 for the entry.
-
-    void setFileSize(long n) {
-        filesize = n;
-    }
-
-    // Return the time of the file creation.
-
-    long getTime() {
-        long t = (file == null) ? 0 : file.lastModified();
-        if (t == 0) t = lastmodified;
-        return t;
-    }
-
-    // Set the time of the file creation.
-
-    void setTime(long time) {
-        lastmodified = time;
-        if (file != null) file.setLastModified(time);
-    }
-
-    // Method to determine if the element is compressed.
-
-    boolean isCompressed() {
-        int m = getMethod();
-        return m != UNCOMPRESSED;
+        // Compression method
+        return 0;
     }
 
     // Return the requested path name.  If our directory entry does not
     // exist as a file return the file name.  This can occur if we created
     // a DirEntry for a new configuration memory resident file.
-
     public String getPath() {
         if (dirname == null) return filename;
         return pathname;
     }
 
     // Overload the ArchiveEntry setPath method to update our file object.
-
     void setPath(String path) {
         super.setPath(path);
         file = new File(pathname);
     }
-
-    // Calculate the CRC32 of the directory entry.
-
-    long computeCRC32(byte[] buf) {
-        Checksum crc32 = new CRC32();
-        crc32.update(buf, 0, buf.length);
-        return crc32.getValue();
-    }
-
 }

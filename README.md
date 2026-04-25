@@ -83,8 +83,10 @@ Now, of course, there are still plenty of functions that I'd love to support, bu
 
 As for the functions that *are* already supported, I plan to write all that down in a longer dedicated FAQ page down the road, perhaps on a dedicated website.
 
-### Will this viewer support PNG/JPEG/GIF/etc. cels and/or ZIP archives?
-**Likely not**. As convenient as these may seem to implement, the truth is that they're almost never used in KiSS dolls. I simply wanted to create a modern Android viewer to view vintage dolls with. I will consider it *only* if there's somehow ever a KiSS doll revival and people want to use more modern solutions to create dolls with. <sub>I mean, JavaScript is right there, but...</sub>
+### Will this viewer support PNG/JPEG/GIF/etc. cels ~~and/or ZIP archives~~?
+ZIP archives have been implemented as of version 1.8-beta.
+
+As for the rest, **likely not**. As convenient as these may seem to implement, the truth is that they're almost never used in KiSS dolls. I simply wanted to create a modern Android viewer to view vintage dolls with. I will consider it *only* if there's somehow ever a KiSS doll revival and people want to use more modern solutions to create dolls with. <sub>I mean, JavaScript is right there, but...</sub>
 
 ### Will you incorporate FKiSS5/UltraKiSS functionality into the app?
 **Maybe, but if I do, likely not everything**. There are some FKiSS5 functions that don't seem too hard to implement (confirm dialogs, for example). But it's not a very high priority at the moment since they're rarely (if ever) used in KiSS dolls.

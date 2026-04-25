@@ -1,6 +1,6 @@
 package moe.lottev.droidkiss;
 
-// Special thanks to William Miles for his LZH archive logic.
+// Special thanks to William Miles for his archive extraction logic.
 // It would've been a headache to implement without the existence of UltraKiSS.
 // You can find the full UltraKiSS source code here:
 // https://github.com/kisekae/ultrakiss
@@ -176,7 +176,6 @@ public final class Lzhuf {
 	/* notes :
 		prnt[T .. T + N_CHAR - 1] used by
 		indicates leaf position that corresponding to code */
-    private final int textsize = 0;
     byte[] text_buf = new byte[N + F - 1];
     private final int[] lson = new int[N + 1];
     private final int[] rson = new int[N + 1 + N];
@@ -187,12 +186,14 @@ public final class Lzhuf {
 
 
     /* update given code's frequency, and update tree */
+    @SuppressWarnings("FieldMayBeFinal")
     private FileWriter fw = null;  /* FileWriter to track progress */
     private int putlen, getlen;
     private int putbuf, getbuf;
     private InputStream in;
     private OutputStream out;
     private int match_position, match_length;
+    @SuppressWarnings("unused")
     private int codesize = 0;
     private boolean eof;
 
@@ -243,15 +244,17 @@ public final class Lzhuf {
         for (i = 0, j = N_CHAR; j < T; i += 2, j++) {
             k = i + 1;
             f = freq[j] = freq[i] + freq[k];
+            //noinspection StatementWithEmptyBody
             for (k = j - 1; f < freq[k]; k--) ;
             k++;
             {
-                for (int p = j, e = k; p > e; p--)
+                for (@SuppressWarnings({"UnnecessaryLocalVariable", "RedundantSuppression"})
+                     int p = j, e = k; p > e; p--)
                     freq[p] = freq[p - 1];
                 freq[k] = f;
             }
             {
-                for (int p = j, e = k; p > e; p--)
+                for (@SuppressWarnings({"UnnecessaryLocalVariable", "RedundantSuppression"}) int p = j, e = k; p > e; p--)
                     son[p] = son[p - 1];
                 son[k] = i;
             }
@@ -278,6 +281,7 @@ public final class Lzhuf {
 
             /* swap nodes when become wrong frequency order. */
             if (k > freq[l = c + 1]) {
+                //noinspection StatementWithEmptyBody
                 for (p = l + 1; k > freq[p++]; ) ;
                 l = p - 2;
                 freq[c] = freq[p - 2];
@@ -310,7 +314,6 @@ public final class Lzhuf {
         int c;
         int i, j;
 
-        //	PrintLn.println("INSERTNODE=" + r);
         cmp = 1;
         key = r;
         i = (text_buf(key + 1)) ^ (text_buf(key + 2));
@@ -318,6 +321,7 @@ public final class Lzhuf {
         p = N + 1 + (text_buf(key)) + ((i & 0x0f) << 8);
         rson[r] = lson[r] = NIL;
         match_length = 0;
+        //noinspection UnusedAssignment
         i = j = 1;
         for (; ; ) {
             if (cmp >= 0) {
@@ -410,8 +414,6 @@ public final class Lzhuf {
     private void deleteNode(int p) {
         int q;
 
-        //	PrintLn.println("DELETENODE=" + p);
-
         if (dad[p] == NIL)
             return;      /* has no linked */
         if (rson[p] == NIL) {
@@ -454,10 +456,8 @@ public final class Lzhuf {
         b |= c >>> len;
         if ((len += l) >= 8) {
             out.write(b >>> 8);
-            // PrintLn.println(l + "," + c + "=" + ((b>>8)&0xff) + "-");
             if ((len -= 8) >= 8) {
                 out.write(b);
-                //	  PrintLn.println("+" + (b&0xff) + "-");
                 codesize += 2;
                 len -= 8;
                 b = c << (l - len);
@@ -478,18 +478,16 @@ public final class Lzhuf {
         j = 0;
         k = prnt[c + T];
 
-        //     PrintLn.println("k="+k);
         /* trace links from leaf node to root */
         do {
             i >>= 1;
 
             /* if node index is odd, trace larger of sons */
-            if ((k & 1) != 0) i += 0x80000000;
+            if ((k & 1) != 0) i += 0x80000000L;
 
             j++;
         } while ((k = prnt[k]) != R);
         i = -i;
-        //     PrintLn.println("i="+(int)i+"k="+k);
         if (j > 16) {
             putcode(16, (int) (i >>> 16));
             putcode(j - 16, (int) i);
@@ -509,7 +507,6 @@ public final class Lzhuf {
     }
 
     private void encodeEnd() throws IOException {
-        //     PrintLn.println(putlen);
         if (putlen > 0) {
             out.write(putbuf >>> 8);
             codesize++;
@@ -519,10 +516,11 @@ public final class Lzhuf {
     private void initTree() {
         for (int p = N + 1, e = N + N; p <= e; )
             rson[p++] = NIL;
-        for (int p = 0, e = N; p < e; )
+        for (@SuppressWarnings({"UnnecessaryLocalVariable", "RedundantSuppression"}) int p = 0, e = N; p < e; )
             dad[p++] = NIL;
     }
 
+    @SuppressWarnings("unused")
     void encode(InputStream in, OutputStream out) throws IOException {
         this.in = in;
         this.out = out;
@@ -581,9 +579,6 @@ public final class Lzhuf {
             }
         } while (len > 0);
         encodeEnd();
-        //     in.close();
-        //     out.close();
-        //if (fw != null) fw.updateProgress(bytes-lastbytes) ;
     }
 
     /* get one bit */
@@ -691,7 +686,7 @@ public final class Lzhuf {
         this.in = in;
         this.out = out;
 
-        int i, j, k, r, c, count;
+        @SuppressWarnings("unused") int i, j, k, r, c, count;
 
         startHuff();
         for (i = 0; i < N - F; i++)
@@ -717,9 +712,5 @@ public final class Lzhuf {
                 }
             }
         }
-    }
-
-    void setFileWriter(FileWriter f) {
-        fw = f;
     }
 }

@@ -1,6 +1,6 @@
 package moe.lottev.droidkiss;
 
-// Special thanks to William Miles for his LZH archive logic.
+// Special thanks to William Miles for his archive extraction logic.
 // It would've been a headache to implement without the existence of UltraKiSS.
 // You can find the full UltraKiSS source code here:
 // https://github.com/kisekae/ultrakiss
@@ -50,22 +50,22 @@ package moe.lottev.droidkiss;
 */
 
 
-/**
- * LhaEntry class
- * <p>
- * Purpose:
- * <p>
- * Objects of this class are LHA file elements.  Each file element has
- * a data header section followed by the file data contents.  The element
- * header is read when this object is created so it is assumed that the
- * LHA file is positioned correctly when this object is created.
- *
+/*
+  LhaEntry class
+  <p>
+  Purpose:
+  <p>
+  Objects of this class are LHA file elements.  Each file element has
+  a data header section followed by the file data contents.  The element
+  header is read when this object is created so it is assumed that the
+  LHA file is positioned correctly when this object is created.
+
  */
 
 import java.io.*;
 import java.util.*;
 
-
+@SuppressWarnings({"FieldCanBeLocal", "unused", "UnusedAssignment", "ConstantValue", "ConditionCoveredByFurtherCondition", "PointlessBitwiseExpression", "UnusedReturnValue"})
 public class LhaEntry extends ArchiveEntry {
     static final public int LH0 = 0;      // Compression method code for -lh0-
     static final public int LH1 = 1;        // Compression method code for -lh1-
@@ -81,6 +81,7 @@ public class LhaEntry extends ArchiveEntry {
     // LHA file header attributes.
 
     private int headersize;                    // Size of archived file header
+    @SuppressWarnings("unused")
     private int headersum;                        // One byte header checksum
     private int skipsize;                        // Compressed file size + ext. hdr
     private int origsize;                        // Uncompressed file size
@@ -111,7 +112,6 @@ public class LhaEntry extends ArchiveEntry {
     // Constructor.  This constructs a new LHA entry by reading the file
     // and decoding the next entry header.  The file is positioned after
     // the header for reading and decoding the compressed data.
-
     LhaEntry(RandomAccessFile in, ArchiveFile af) throws IOException {
         this.in = in;
         archive = af;
@@ -124,7 +124,6 @@ public class LhaEntry extends ArchiveEntry {
     }
 
     // Constructor.  This constructs a new LHA entry from a memory file.
-
     LhaEntry(MemFile in, ArchiveFile af) throws IOException {
         memfile = in;
         archive = af;
@@ -138,7 +137,6 @@ public class LhaEntry extends ArchiveEntry {
 
 
     // Constructor.  This constructs a new LHA entry from a given file name.
-
     LhaEntry(String s) {
         File f = new File(s);
         name = f.getName();
@@ -181,13 +179,11 @@ public class LhaEntry extends ArchiveEntry {
         int val = 0;
 
         // Convert the time to a GMT time.
-
         if (t == 0) return 0;
         Calendar c = Calendar.getInstance();
         c.setTime(new Date(t));
 
         // Isolate the year, month, day, hours, minutes, seconds.
-
         year = c.get(Calendar.YEAR) - 1980;
         month = c.get(Calendar.MONTH) + 1;
         day = c.get(Calendar.DAY_OF_MONTH);
@@ -196,7 +192,6 @@ public class LhaEntry extends ArchiveEntry {
         sec = c.get(Calendar.SECOND) / 2;
 
         // Encode the Msdos format.
-
         val = (year << 25) | (month << 21) | (day << 16) | (hour << 11) | (min << 5) | sec;
         return val;
     }
@@ -214,11 +209,10 @@ public class LhaEntry extends ArchiveEntry {
         int year, month, day, hour, min, sec;
         long longtime;
 
-        int t = (int) (time & 0xffffffff);
+        int t = (int) (time);
         if (t == 0) return 0;
 
         // Isolate year, month, day, hours, minutes, seconds.
-
         year = ((t >> 25) & 0x7f) + 1980;
         month = ((t >> 21) & 0x0f);        // .12 means Jan..Dec
         day = ((t >> 16) & 0x1f);            // .31 means 1st,...31st
@@ -227,15 +221,13 @@ public class LhaEntry extends ArchiveEntry {
         sec = (t & 0x1f) * 2;
 
         // Check for valid time and date.
-
         if (month > 12 || month < 1) return 0;
-        if (day > 31 || day < 1) return 0;
+        if (day < 1) return 0;
         if (hour >= 24) return 0;
         if (min >= 60) return 0;
         if (sec > 60) return 0;
 
         // Calculate time since the JAVA epoch
-
         Calendar calendar = Calendar.getInstance();
         calendar.set(year, month - 1, day, hour, min, sec);
         Date d = calendar.getTime();
@@ -247,24 +239,22 @@ public class LhaEntry extends ArchiveEntry {
     // Returns an input stream to read the compressed file data from this
     // file entry.  The file is positioned appropriately for reading to
     // begin.
-
     void readHeader() throws IOException {
         headersize = readByte();
         if (headersize <= 0)
             throw new EOFException("Zero sized LHA file");
         headersum = readByte();
         for (int i = 0; i < 5; i++)
+            //noinspection StringConcatenationInLoop
             method += (char) readByte();
 
         // Check if this is a valid LHA file.  We used to return an IO
         // exception, but apparently some LHA encoders leave junk at
         // the end of the file and do not terminate it properly.
-
         if (method.charAt(0) != '-')
             throw new EOFException("Invalid LHA file signature");
 
         // Continue reading the remainder of the header.
-
         extsize = 0;
         skipsize = littleEndian(readInt());
         origsize = littleEndian(readInt());
@@ -280,6 +270,7 @@ public class LhaEntry extends ArchiveEntry {
                 datetime = toGeneric(time);
                 namelen = readByte();
                 for (int i = 0; i < namelen; i++)
+                    //noinspection StringConcatenationInLoop
                     name += (char) readByte();
                 crc16 = littleEndian(readShort());
                 next = 0;
@@ -289,6 +280,7 @@ public class LhaEntry extends ArchiveEntry {
                 datetime = toGeneric(time);
                 namelen = readByte();
                 for (int i = 0; i < namelen; i++)
+                    //noinspection StringConcatenationInLoop
                     name += (char) readByte();
                 crc16 = littleEndian(readShort());
                 os = (char) readByte();
@@ -309,7 +301,6 @@ public class LhaEntry extends ArchiveEntry {
 
         // Read the extended headers if they exist.
         // Level 0 files do not have header extensions.
-
         if (level > 0) {
             // Read extended headers.  The first byte of an extended
             // header identifies the type of header, and the last two
@@ -328,13 +319,11 @@ public class LhaEntry extends ArchiveEntry {
         }
 
         // Correct the compressed data block size for level 1 files.
-
         if (level == 1)
             packsize = skipsize - extsize;
 
         // Position the file so the next read occurs immediately after
         // the header area.
-
         if (level == 0)
             seek(filepointer + headersize + 2);
         if (level == 1)
@@ -344,20 +333,21 @@ public class LhaEntry extends ArchiveEntry {
     }
 
     // Return an input stream to read this element in uncompressed form.
-
     int readExt(int exttype, int size) throws IOException {
         switch (exttype) {
             case 0:        // crc of header
                 break;
             case 1:        // file name
                 name = "";
-                for (; size > 0; size--) name += (char) readByte();
+                for (; size > 0; size--) //noinspection StringConcatenationInLoop
+                    name += (char) readByte();
                 break;
             case 2:        // directory name
                 dir = "";
                 for (; size > 0; size--) {
                     char c = (char) readByte();
                     if (c == '\uFFFF') c = File.separatorChar;
+                    //noinspection StringConcatenationInLoop
                     dir += c;
                 }
                 break;
@@ -378,11 +368,13 @@ public class LhaEntry extends ArchiveEntry {
                 break;
             case 0x52:    // UNIX group name
                 group = "";
-                for (; size > 0; size--) group += (char) readByte();
+                for (; size > 0; size--) //noinspection StringConcatenationInLoop
+                    group += (char) readByte();
                 break;
             case 0x53:    // UNIX user name
                 user = "";
-                for (; size > 0; size--) user += (char) readByte();
+                for (; size > 0; size--) //noinspection StringConcatenationInLoop
+                    user += (char) readByte();
                 break;
             case 0x54:    // UNIX modified time
                 lastmodified = littleEndian(readInt());
@@ -394,7 +386,6 @@ public class LhaEntry extends ArchiveEntry {
 
 
     // Skips to the next entry in the file.
-
     public InputStream getCompressedInputStream() throws IOException {
         if (in == null && memfile == null) return null;
         seek(datapointer);
@@ -405,7 +396,6 @@ public class LhaEntry extends ArchiveEntry {
 
 
     // Sets the uncompressed file CRC.
-
     public InputStream getInputStream() throws IOException {
         if (memfile != null) return memfile.getInputStream();
         if (archive == null || !archive.isOpen()) return null;
@@ -416,49 +406,24 @@ public class LhaEntry extends ArchiveEntry {
         skipBytes(packsize);
     }
 
-    // Return the CRC for the uncompressed file.
-
-    int getCrc16() {
-        return crc16;
-    }
-
-    void setCrc16(int crc) {
-        crc16 = crc;
-    }
-
-
-    // Return the requested element name.
-
-    long getCrc32() {
-        return crc32;
-    }
-
-
     // Returns the full path name of the file.  If the directory is
     // the home UNIX '/' character then simply return the file name.
-
     void setCrc32(long crc) {
         crc32 = crc;
     }
 
-
     // Set the required output element name.
-
     public String getName() {
         return name;
     }
 
-
     // Set the required output path name.
-
     void setName(String name) {
         this.name = name;
         super.setName(name);
     }
 
-
     // Returns the uncompressed file size.
-
     public String getPath() {
         String s1 = convertSeparator(dir);
         String s2 = convertSeparator(name);
@@ -470,9 +435,7 @@ public class LhaEntry extends ArchiveEntry {
         return path;
     }
 
-
     // Returns the compressed file size.
-
     void setPath(String path) {
         dir = "";
         name = "";
@@ -485,19 +448,9 @@ public class LhaEntry extends ArchiveEntry {
         filename = name;
         dirname = dir;
     }
-
-
-    // Returns the file update or creation time.
-
-    //	public long getSize() { return (copy) ? 0 : (long) origsize ; }
     public long getSize() {
         return origsize;
     }
-
-
-    // Set the time of the file update or creation.
-
-    //	public long getCompressedSize() { return (copy) ? 0 : (long) packsize ; }
     public long getCompressedSize() {
         return packsize;
     }
@@ -519,19 +472,6 @@ public class LhaEntry extends ArchiveEntry {
     // -lz5-   4k sliding dictionary(max 17 bytes)
     // -lz6-   16k sliding dictionary
     // -lz7-   32k sliding dictionary
-
-    public long getTime() {
-        return datetime;
-    }
-
-    // Set the compression method.
-
-    public void setTime(long t) {
-        datetime = t;
-    }
-
-    // Return the method text string.
-
     public int getMethod() {
         if ("-lh0-".equals(method)) return LH0;
         if ("-lh1-".equals(method)) return LH1;
@@ -543,7 +483,6 @@ public class LhaEntry extends ArchiveEntry {
     }
 
     // Method to determine if the element is compressed.
-
     void setMethod(int m) {
         method = "";
         if (m == LH0) method = "-lh0-";
@@ -553,7 +492,6 @@ public class LhaEntry extends ArchiveEntry {
         if (m == LH7) method = "-lh7-";
         if (m == LHD) method = "-lhd-";
     }
-
 
     // Little Endian input data conversions.  Little Endian is a method
     // where numeric terms write the least significant byte first in the
@@ -575,10 +513,8 @@ public class LhaEntry extends ArchiveEntry {
     /* 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0		*/
     /* |<-- hour --->|<---- minute ---->|<-second*2->|		*/
 
-
     // Given a time in milliseconds sinch the epoch, convert the
     // time to a GMT date in Msdos format.
-
     private int littleEndian(int x) {
         int b0 = (x >> 24) & 255;
         int b1 = (x >> 16) & 255;
@@ -587,9 +523,7 @@ public class LhaEntry extends ArchiveEntry {
         return (b0 << 0) + (b1 << 8) + (b2 << 16) + (b3 << 24);
     }
 
-
     // Given a GMT time and date in Msdos format, convert it to milliseconds.
-
     private short littleEndian(short x) {
         int b0 = (x >> 8) & 255;
         int b1 = (x >> 0) & 255;
@@ -630,15 +564,13 @@ public class LhaEntry extends ArchiveEntry {
 
     // An inner class to construct an input stream to read from an LHA random
     // access file entry of a known length.
-
-    class LhaInputStream extends InputStream {
+    static class LhaInputStream extends InputStream {
         int p;
         int packsize;
         int ch;
         RandomAccessFile in;
 
         // Constructor
-
         LhaInputStream(RandomAccessFile in, int size) {
             this.in = in;
             packsize = size;
@@ -646,7 +578,6 @@ public class LhaEntry extends ArchiveEntry {
 
         // Read a character.  If we have reached the maximum length of the
         // entry we return an end-of-file indicator.
-
         public int read() throws IOException {
             if (p >= packsize) return -1;
             p++;
@@ -658,15 +589,13 @@ public class LhaEntry extends ArchiveEntry {
 
     // An inner class to construct an input stream to read from a memory
     // file entry of a known length.
-
-    class MemInputStream extends InputStream {
+    static class MemInputStream extends InputStream {
         int p;
         int packsize;
         int ch;
         MemFile in;
 
         // Constructor
-
         MemInputStream(MemFile in, int size) {
             this.in = in;
             packsize = size;
@@ -674,7 +603,6 @@ public class LhaEntry extends ArchiveEntry {
 
         // Read a character.  If we have reached the maximum length of the
         // entry we return an end-of-file indicator.
-
         public int read() throws IOException {
             if (p >= packsize) return -1;
             p++;

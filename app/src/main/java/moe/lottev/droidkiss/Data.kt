@@ -18,16 +18,14 @@ data class KissDoll(
     val themeColor: Color,
     val bgColor: Color,
     val config: ConfigParser,
-    val palettes: List<KissPalette> = emptyList(),
-    val activePaletteIndex: Int = 0,
     val allFiles: Map<String, ByteArray>,
 )
 
-/** KCF palette. */
-data class KissPalette(
-    val id: Int,
-    val colors: List<Color> // Color is from androidx.compose.ui.graphics
-)
+// /** KCF palette. */
+//data class KissPalette(
+//    val id: Int,
+//    val colors: List<Color> // Color is from androidx.compose.ui.graphics
+//)
 
 data class KissInTrigger(
     val sourceId: Int,
@@ -42,9 +40,7 @@ data class KissLayerDescriptor(
     var y: Int,
     val depth: Int = 0,
     val setID: Int = 0,
-    var paletteMarker: Char = 'a',
     var paletteIndex: Int = 0,
-    var bankIndex: Int = 0,
     var objectId: Int,
     val initialUnmapped: Boolean = false,
     var isInitiallyFixed: Boolean = false,
@@ -181,5 +177,5 @@ sealed class ShellEvent {
 /** FKiSS action type list. TODO: Implement currently unused actions. */
 @Suppress("unused")
 enum class ActionType {
-    COL, CHANGECOL, UNFIX, SETFIX, IFFIXED, IFNOTFIXED, TRANSPARENT, MAP, UNMAP, ALTMAP, IFMAPPED, IFNOTMAPPED, TIMER, ALARM, MOVE, MOVEBYX, MOVEBYY, MOVETO, RANDOM_TIMER, PRESS, RELEASE, CATCH, DROP, FIXCATCH, FIXDROP, SET, CHANGESET, IN, OUT, COLLIDE, APART, SOUND, MUSIC, NOTIFY, DETACHED, KEY, MOUSEIN, MOUSEOUT, STILLIN, STILLOUT, ADD, ATTACH, DETACH, IF, ELSE, ENDIF, GHOST, EXITEVENT, EXITLOOP, GLUE, GOSUB, GOSUBRANDOM, GOTO, GOTORANDOM, LABEL, NOP, VIEWPORT, SHELL, DEBUG, QUIT, END;
+    COL, CHANGECOL, SETKCF, UNFIX, SETFIX, IFFIXED, IFNOTFIXED, TRANSPARENT, MAP, UNMAP, ALTMAP, IFMAPPED, IFNOTMAPPED, TIMER, ALARM, MOVE, MOVEBYX, MOVEBYY, MOVETO, RANDOM_TIMER, PRESS, RELEASE, CATCH, DROP, FIXCATCH, FIXDROP, SET, CHANGESET, IN, OUT, COLLIDE, APART, SOUND, MUSIC, NOTIFY, DETACHED, KEY, MOUSEIN, MOUSEOUT, STILLIN, STILLOUT, ADD, ATTACH, DETACH, IF, ELSE, ENDIF, GHOST, EXITEVENT, EXITLOOP, GLUE, GOSUB, GOSUBRANDOM, GOTO, GOTORANDOM, LABEL, NOP, VIEWPORT, SHELL, DEBUG, QUIT, END;
 }

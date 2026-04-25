@@ -201,8 +201,8 @@ class ViewModel(application: Application) :
         }
     }
     @Suppress("unused")
-    /** Load LZH into the viewmodel */
-    fun loadLzh(context: Context, uri: Uri, specificCnf: String? = null) {
+    /** Load archive into the viewmodel */
+    fun loadArchive(context: Context, uri: Uri, specificCnf: String? = null) {
         if (currentDoll != null && uiState == KissUiState.Loaded(currentDoll!!)) {
             // Trigger any end() events if doll is loaded
             executeEvent("end")
@@ -212,10 +212,10 @@ class ViewModel(application: Application) :
             shutdownCurrentDoll()
             isExpansionSet = false
 
-            availableCnfs = emptyList() // Reset CNF list for the new LZH
+            availableCnfs = emptyList() // Reset CNF list for the new archive
 
             try {
-                // Extract all files from the LZH into our Master Cache
+                // Extract all files from the archive into our Master Cache
                 val newFiles = engine.extractAllFiles(uri)
                 masterFileCache.putAll(newFiles)
 
@@ -304,7 +304,7 @@ class ViewModel(application: Application) :
                 showCnfSelector = true // This triggers the dialog in the UI
             } else {
                 // If only one, just load it immediately
-                loadLzh(context, uri, cnfs.firstOrNull())
+                loadArchive(context, uri, cnfs.firstOrNull())
             }
         }
     }
@@ -770,7 +770,13 @@ class ViewModel(application: Application) :
                             layerName == target
                         }
                     }
-                    if (targetLayer != null || (targetId != null && targetId == 0)) targetLayer?.descriptor?.isFixed = false
+                    if (targetLayer != null || (targetId != null && targetId == 0)) {
+                        targetLayer?.descriptor?.isFixed = false
+                        if (targetLayer != null) {
+                            executeUnfixActions(targetLayer)
+                        }
+                    }
+
                     refreshTrigger++
                     return true
                 }
@@ -793,6 +799,9 @@ class ViewModel(application: Application) :
 
                         if (isMatch) {
                             layer.descriptor.isFixed = shouldFix
+                            if (shouldFix) {
+                                executeUnfixActions(layer)
+                            }
                         }
                     }
                     refreshTrigger++
@@ -862,6 +871,7 @@ class ViewModel(application: Application) :
                     return true
                 }
                 ActionType.NOP -> return true
+                ActionType.EXITEVENT -> return false
                 ActionType.SHELL -> {
                     // Only emit shell events when it's a URL or an email address
                     val target = action.target.lowercase()
@@ -869,11 +879,42 @@ class ViewModel(application: Application) :
                             "www.") || target.startsWith("mailto:")) {
                         executeShellEvent(action)
                     }
+                    return true
+                }
+                ActionType.CHANGECOL -> {
+                    val targetIndex = action.target.toIntOrNull() ?: 0
+                    val doll = currentDoll
+
+                    if (doll != null) {
+                        doll.activeGlobalBank = targetIndex
+                    }
+                    return true
+                }
+                ActionType.SETKCF -> {
+                    val target = action.target.lowercase().replace("#", "").replace("\"", "")
+                    val targetId = target.toIntOrNull()
+                    val value = action.valueStr.toIntOrNull() ?: 0
+
+                    currentDoll?.layers?.forEach { layer ->
+                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
+
+                        val isMatch = if (targetId != null && !target.contains(".")) {
+                            layer.descriptor.objectId == targetId
+                        } else {
+                            layerName == target
+                        }
+
+                        if (isMatch) {
+                            layer.descriptor.paletteIndex = value
+                        }
+                    }
+                    return true
                 }
                 ActionType.QUIT -> {
                     if (uiState is KissUiState.Loaded) {
                         uiState = KissUiState.Empty
                     }
+                    return false
                 }
                 else -> return true
             }
@@ -1258,21 +1299,11 @@ class ViewModel(application: Application) :
         }
     }
 
+    /** Execute actions that trigger upon `unfix` */
     fun executeUnfixActions(hitLayer: KissLayer) {
         val objIdStr = hitLayer.descriptor.objectId.toString()
         val fileName = hitLayer.descriptor.fileName.lowercase().substringBefore(".")
-        val actions = (configParser.unfixActions[objIdStr] ?: emptyList()) +
-                (configParser.unfixActions[fileName] ?: emptyList())
-
-        actions.distinct().forEach { performAction(it) }
-        refreshTrigger++
-    }
-
-    fun executeSetFixActions(hitLayer: KissLayer) {
-        val objIdStr = hitLayer.descriptor.objectId.toString()
-        val fileName = hitLayer.descriptor.fileName.lowercase().substringBefore(".")
-        val actions = (configParser.setFixActions[objIdStr] ?: emptyList()) +
-                (configParser.setFixActions[fileName] ?: emptyList())
+        val actions = (configParser.unfixActions[objIdStr] ?: emptyList()) + (configParser.unfixActions[fileName] ?: emptyList())
 
         actions.distinct().forEach { performAction(it) }
         refreshTrigger++

@@ -1,6 +1,6 @@
 package moe.lottev.droidkiss;
 
-// Special thanks to William Miles for his LZH archive logic.
+// Special thanks to William Miles for his archive extraction logic.
 // It would've been a headache to implement without the existence of UltraKiSS.
 // You can find the full UltraKiSS source code here:
 // https://github.com/kisekae/ultrakiss
@@ -50,15 +50,15 @@ package moe.lottev.droidkiss;
 */
 
 
-/**
- * DirFile class
- * <p>
- * Purpose:
- * <p>
- * This class manages an uncompressed directory for a KiSS data set.
- * It contains methods to open and close the file and to return an
- * enumeration of the files contained in the directory.
- *
+/*
+  DirFile class
+  <p>
+  Purpose:
+  <p>
+  This class manages an uncompressed directory for a KiSS data set.
+  It contains methods to open and close the file and to return an
+  enumeration of the files contained in the directory.
+
  */
 
 import java.io.*;
@@ -66,15 +66,12 @@ import java.io.*;
 public final class DirFile extends ArchiveFile {
     // Directory attributes.
     private File file = null;                    // File object for directory
-    private String name = null;           // File or directory path name
-    private String directory = null;      // Directory name
-
+    private String directory;      // Directory name
 
     // Constructor.  This method examines a file directory and
     // constructs a vector of elements contained within the directory.
-    public DirFile(String name) throws IOException {
-        this.name = name;
-        //this.fileopen = fileopen;
+    public DirFile(String name) {
+        // File or directory path name
         pathname = name;
         directory = name;
 
@@ -97,7 +94,7 @@ public final class DirFile extends ArchiveFile {
     // When directory files are first opened the contents are established,
     // If they are re-opened the existing contents are retained and any
     // new files in the directory are added to the contents.
-    public void open() throws IOException {
+    public void open() {
         if (contents == null) init();
         if (directory == null) return;
         file = new File(directory);
@@ -106,11 +103,9 @@ public final class DirFile extends ArchiveFile {
 
         // Construct an index of the elements in the file directory.
         open = true;
-        for (int i = 0; i < files.length; i++) {
-            File f = files[i];
+        for (File f : files) {
             if (f.isDirectory()) continue;
             String s = f.getPath();
-            if (s == null) continue;
             if (key.get(s.toLowerCase()) != null) continue;
             DirEntry h = new DirEntry(directory, f.getName(), this);
             addEntry(h);
@@ -118,7 +113,6 @@ public final class DirFile extends ArchiveFile {
             compressedsize += h.getCompressedSize();
         }
     }
-
 
     // Returns an input stream for reading the uncompressed contents of
     // the specified directory file entry.
@@ -128,15 +122,6 @@ public final class DirFile extends ArchiveFile {
         return (de.getInputStream());
     }
 
-
-    // Returns an output stream for writing the uncompressed contents of
-    // the specified directory file entry.
-    public OutputStream getOutputStream(ArchiveEntry de) throws IOException {
-        if (!(de instanceof DirEntry)) return null;
-        return (de.getOutputStream());
-    }
-
-
     // Required method to close a directory file.
     public void close() {
         if (opencount <= 0) return;
@@ -144,14 +129,12 @@ public final class DirFile extends ArchiveFile {
         open = false;
     }
 
-
     // Release the directory contents reference.
     void flush() {
         file = null;
         opencount = 0;
         contents = null;
     }
-
 
     // Returns the file open state.
     public boolean isOpen() {

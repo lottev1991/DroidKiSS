@@ -28,7 +28,6 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
 
     val setActions = mutableMapOf<String, List<KissAction>>()
 
-    val setFixActions = mutableMapOf<String, List<KissAction>>()
     val unfixActions = mutableMapOf<String, List<KissAction>>()
 
     val labelActions = mutableMapOf<String, List<KissAction>>()
@@ -117,7 +116,10 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 "version",
                 "ghost",
                 "nop",
+                "exitevent",
                 "shell",
+                "changecol",
+                "setkcf"
             )
 
             val hasForbiddenWord = forbidden.any { cleaned.contains(it) && !cleaned.contains("begin") }
@@ -240,6 +242,10 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                         "ghost" -> ActionType.GHOST
                         "nop" -> ActionType.NOP
                         "shell" -> ActionType.SHELL
+                        "exitevent" -> ActionType.EXITEVENT
+                        "changecol" -> ActionType.CHANGECOL
+                        "setkcf" -> ActionType.SETKCF
+                        "quit" -> ActionType.QUIT
                         else -> null
                     }
 
@@ -329,6 +335,10 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                         "ghost" -> ActionType.GHOST
                         "nop" -> ActionType.NOP
                         "shell" -> ActionType.SHELL
+                        "exitevent" -> ActionType.EXITEVENT
+                        "changecol" -> ActionType.CHANGECOL
+                        "setkcf" -> ActionType.SETKCF
+                        "quit" -> ActionType.QUIT
                         else -> null
                     }
 
@@ -380,8 +390,6 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
             apartActions[cleanTrigger] = currentEventActions.toList()
         } else if (name.contains("set", ignoreCase = true) && !name.contains("setfix", ignoreCase = true)) {
             setActions[rawTrigger] = currentEventActions.toList()
-        } else if (name.contains("setfix", ignoreCase = true)) {
-            setFixActions[cleanTrigger] = currentEventActions.toList()
         } else if (name.contains("unfix", ignoreCase = true)) {
             unfixActions[cleanTrigger] = currentEventActions.toList()
         } else if (name.contains("label", ignoreCase = true)) {
@@ -651,6 +659,10 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 "ghost" -> ActionType.GHOST
                 "nop" -> ActionType.NOP
                 "shell" -> ActionType.SHELL
+                "exitevent" -> ActionType.EXITEVENT
+                "changecol" -> ActionType.CHANGECOL
+                "setkcf" -> ActionType.SETKCF
+                "quit" -> ActionType.QUIT
                 else -> null
             }
 

@@ -1,6 +1,6 @@
 package moe.lottev.droidkiss;
 
-// Special thanks to William Miles for his LZH archive logic.
+// Special thanks to William Miles for his archive extraction logic.
 // It would've been a headache to implement without the existence of UltraKiSS.
 // You can find the full UltraKiSS source code here:
 // https://github.com/kisekae/ultrakiss
@@ -50,46 +50,31 @@ package moe.lottev.droidkiss;
 */
 
 
-/**
- * MemFile class
- * <p>
- * Purpose:
- * <p>
- * This class simulates a random access file for LHA type file processing.
- * Files of this type are created for URL files loaded from the web if we
- * are running in a secure environment.
- *
+/*
+  MemFile class
+  <p>
+  Purpose:
+  <p>
+  This class simulates a random access file for LHA type file processing.
+  Files of this type are created for URL files loaded from the web if we
+  are running in a secure environment.
+
  */
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 
 public final class MemFile {
-    private String filename = null;
-    private byte[] buffer = null;
+    private final byte[] buffer;
     private long offset = 0;
 
-
-    // Constructor
-    public MemFile() {
-    }
-
-    public MemFile(String name, byte[] mem) {
-        filename = name;
+    public MemFile(byte[] mem) {
         buffer = mem;
-    }
-
-    public MemFile(byte[] data) {
     }
 
     // Return an input stream to read this memory file.
     InputStream getInputStream() {
         return new ByteArrayInputStream(buffer);
-    }
-
-    // Return the memory file data buffer.
-    byte[] getBuffer() {
-        return buffer;
     }
 
     // When we close a memory file we reset our offset pointer.
@@ -150,10 +135,6 @@ public final class MemFile {
         if (offset < 0) throw new IOException("memory file invalid file position");
         if (offset > buffer.length) offset = buffer.length;
         return (int) (offset - oldoffset);
-    }
-
-    public String getFileName() {
-        return filename;
     }
 
     public long getSize() {

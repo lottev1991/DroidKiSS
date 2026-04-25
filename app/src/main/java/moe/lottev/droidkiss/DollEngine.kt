@@ -24,9 +24,9 @@ class DollEngine(context: Context,
 
     suspend fun discoverCnfs(uri: Uri): List<String> {
         return withContext(Dispatchers.IO) {
-            val lha = repo.loadLzh(uri) ?: return@withContext emptyList()
+            val archive = repo.loadLzh(uri) ?: repo.loadZip(uri) ?: return@withContext emptyList()
             val entries =
-                (lha.contents as? List<*>)?.filterIsInstance<ArchiveEntry>() ?: emptyList()
+                (archive.contents as? List<*>)?.filterIsInstance<ArchiveEntry>() ?: emptyList()
 
             // Return a list of all found CNF filenames
             entries.filter { it.name.endsWith(".cnf", ignoreCase = true) }
@@ -38,12 +38,20 @@ class DollEngine(context: Context,
     suspend fun extractAllFiles(uri: Uri): Map<String, ByteArray> {
         return withContext(Dispatchers.IO) {
             val lha = repo.loadLzh(uri) ?: return@withContext emptyMap()
+            val zip = repo.loadZip(uri) ?: return@withContext emptyMap()
             val entries =
                 (lha.contents as? List<*>)?.filterIsInstance<ArchiveEntry>() ?: emptyList()
+            val zipEntries =
+                (zip.contents as? List<*>)?.filterIsInstance<ArchiveEntry>() ?: emptyList()
             val map = mutableMapOf<String, ByteArray>()
 
             entries.forEach { entry ->
-                repo.extractEntry(lha, entry)?.let { bytes ->
+                repo.extractLhaEntry(lha, entry)?.let { bytes ->
+                    map[entry.name] = bytes
+                }
+            }
+            zipEntries.forEach { entry ->
+                repo.extractZipEntry(zip, entry)?.let { bytes ->
                     map[entry.name] = bytes
                 }
             }
