@@ -1109,7 +1109,7 @@ fun CnfSelectionDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.select_cnf)) },
         text = {
-            Column {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 options.forEach { cnfName ->
                     TextButton(
                         onClick = { onSelect(cnfName) },
