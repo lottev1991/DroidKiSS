@@ -62,7 +62,6 @@ class ViewModel(application: Application) :
         )
     }
 
-    @Suppress("unused")
     sealed class KissUiState {
         object Empty : KissUiState()
         object Loading : KissUiState()
