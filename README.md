@@ -7,7 +7,7 @@
 
 <p align="center">
     <a href="https://github.com/lottev1991/droidkiss/releases">
-        <img alt="DroidKiSS download button, which links to the Releases tab" width=350 alt="DroidKiSS logo" src="droidkiss_dl_btn.svg">
+        <img alt="DroidKiSS download button, which links to the Releases tab" width=350 src="droidkiss_dl_btn.svg">
     </a>
 </p>
 
