@@ -30,8 +30,8 @@ class CelDecoder {
             dataOffset = 32
         } else {
             bitDepth = 4 // Default for v0
-            width = readShort(data, 1)
-            height = readShort(data, 3)
+            width = readShort(data, 0)
+            height = readShort(data, 2)
             offsetX = 0
             offsetY = 0
             dataOffset = 4

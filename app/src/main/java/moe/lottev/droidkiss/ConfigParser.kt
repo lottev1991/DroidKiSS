@@ -158,7 +158,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 val raw = nameMatch?.groupValues?.get(1)?.replace("\"", "")?.lowercase() ?: ""
 
                 currentEventName = when {
-                    isPressLine -> "press($raw)" // Keeps "luna2.cel" as "luna2.cel"
+                    isPressLine -> "press($raw)"
                     isReleaseLine -> "release($raw)"
                     isAlarmLine -> "alarm($raw)"
                     isCollideLine -> "collide($raw)"

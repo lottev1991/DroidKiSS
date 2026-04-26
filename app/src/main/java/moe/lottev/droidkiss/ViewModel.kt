@@ -1449,7 +1449,7 @@ class ViewModel(application: Application) :
     /** `altmap()` FKiSS event */
     fun altMapping(target: String) {
         val cleanTarget = target.replace("#", "").replace("\"", "").trim()
-            .lowercase().removeSuffix(".cel").removeSuffix(".lbm")
+            .lowercase().removeSuffix(".cel")
         val numericId = cleanTarget.toIntOrNull()
 
         currentDoll?.layers?.forEach { layer ->

@@ -21,12 +21,6 @@ data class KissDoll(
     val allFiles: Map<String, ByteArray>,
 )
 
-// /** KCF palette. */
-//data class KissPalette(
-//    val id: Int,
-//    val colors: List<Color> // Color is from androidx.compose.ui.graphics
-//)
-
 data class KissInTrigger(
     val sourceId: Int,
     val targetId: Int,

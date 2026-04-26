@@ -34,7 +34,7 @@ class DollEngine(context: Context,
         }
     }
 
-    // New helper to just get the files out
+    /** Extract all files from archive */
     suspend fun extractAllFiles(uri: Uri): Map<String, ByteArray> {
         return withContext(Dispatchers.IO) {
             val lha = repo.loadLzh(uri) ?: return@withContext emptyMap()
