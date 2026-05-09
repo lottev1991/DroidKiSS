@@ -401,7 +401,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                         else -> null
                     }
 
-                    if (type != null && target.isNotEmpty()) {
+                    if (type != null) {
                         currentEventActions.add(
                             KissAction(
                                 target,
