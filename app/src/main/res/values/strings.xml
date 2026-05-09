@@ -30,4 +30,6 @@
     <string name="close">Close</string>
     <string name="show_cnf_source">Show CNF text</string>
     <string name="back">Back</string>
+    <string name="palette_select">Palette #</string>
+    <string name="desc_pal_menu">Palette menu</string>
 </resources>

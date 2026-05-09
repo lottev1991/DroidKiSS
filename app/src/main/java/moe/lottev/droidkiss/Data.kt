@@ -43,7 +43,6 @@ data class KissLayerDescriptor(
     val celOffsetX: Int = 0,
     val celOffsetY: Int = 0,
     val initialAlpha: Int = 0,
-    var currentDragOffset: Offset = Offset.Zero,
 ) {
     var isUnmapped by mutableStateOf(initialUnmapped)
     var isFixed by mutableStateOf(isInitiallyFixed)
@@ -55,6 +54,7 @@ data class DecodeResult(
     val rawIndices: ByteArray,
     val offsetX: Int,
     val offsetY: Int,
+    val bitDepth: Int
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -109,6 +109,8 @@ data class KissLayer(
     val width: Int,
     val height: Int,
     var alpha: Float = 1f,
+    val paletteGroups: List<IntArray>,
+    val bitDepth: Int,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -122,6 +124,7 @@ data class KissLayer(
         if (bitmap != other.bitmap) return false
         if (!rawIndices.contentEquals(other.rawIndices)) return false
         if (fileName != other.fileName) return false
+        if (bitDepth != other.bitDepth) return false
 
         return true
     }
@@ -133,6 +136,7 @@ data class KissLayer(
         result = 31 * result + bitmap.hashCode()
         result = 31 * result + rawIndices.contentHashCode()
         result = 31 * result + fileName.hashCode()
+        result = 31 * result + bitDepth.hashCode()
         return result
     }
 
@@ -171,5 +175,5 @@ sealed class ShellEvent {
 /** FKiSS action type list. TODO: Implement currently unused actions. */
 @Suppress("unused")
 enum class ActionType {
-    COL, CHANGECOL, SETKCF, UNFIX, SETFIX, IFFIXED, IFNOTFIXED, TRANSPARENT, MAP, UNMAP, ALTMAP, IFMAPPED, IFNOTMAPPED, TIMER, ALARM, MOVE, MOVEBYX, MOVEBYY, MOVETO, RANDOM_TIMER, PRESS, RELEASE, CATCH, DROP, FIXCATCH, FIXDROP, SET, CHANGESET, IN, OUT, COLLIDE, APART, SOUND, MUSIC, NOTIFY, DETACHED, KEY, MOUSEIN, MOUSEOUT, STILLIN, STILLOUT, ADD, ATTACH, DETACH, IF, ELSE, ENDIF, GHOST, EXITEVENT, EXITLOOP, GLUE, GOSUB, GOSUBRANDOM, GOTO, GOTORANDOM, LABEL, NOP, VIEWPORT, SHELL, DEBUG, QUIT, END;
+    COL, CHANGECOL, SETKCF, UNFIX, SETFIX, IFFIXED, IFNOTFIXED, TRANSPARENT, MAP, UNMAP, ALTMAP, IFMAPPED, IFNOTMAPPED, TIMER, ALARM, MOVE, MOVEBYX, MOVEBYY, MOVETO, MOVETORAND, MOVERANDX, MOVERANDY, IFMOVED, IFNOTMOVED, RANDOM_TIMER, PRESS, RELEASE, CATCH, DROP, FIXCATCH, FIXDROP, SET, CHANGESET, IN, OUT, COLLIDE, APART, SOUND, MUSIC, NOTIFY, DETACHED, KEY, MOUSEIN, MOUSEOUT, STILLIN, STILLOUT, ADD, ATTACH, DETACH, IF, ELSE, ENDIF, GHOST, EXITEVENT, EXITLOOP, GLUE, GOSUB, GOSUBRANDOM, GOTO, GOTORANDOM, LABEL, NOP, VIEWPORT, WINDOWSIZE, SHELL, DEBUG, QUIT, END;
 }

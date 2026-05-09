@@ -20,8 +20,17 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
     val pressActions = mutableMapOf<String, List<KissAction>>()
     val releaseActions = mutableMapOf<String, List<KissAction>>()
 
+    val catchActions = mutableMapOf<String, List<KissAction>>()
+    val dropActions = mutableMapOf<String, List<KissAction>>()
+
+    val fixCatchActions = mutableMapOf<String, List<KissAction>>()
+    val fixDropActions = mutableMapOf<String, List<KissAction>>()
+
     val inActions = mutableMapOf<String, List<SnapRule>>()
     val inEventActions = mutableMapOf<String, List<KissAction>>()
+
+    val stillInActions = mutableMapOf<String, List<KissAction>>()
+    val stillOutActions = mutableMapOf<String, List<KissAction>>()
 
     val collideActions = mutableMapOf<String, List<KissAction>>()
     val apartActions = mutableMapOf<String, List<KissAction>>()
@@ -31,6 +40,8 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
     val unfixActions = mutableMapOf<String, List<KissAction>>()
 
     val labelActions = mutableMapOf<String, List<KissAction>>()
+
+    val colActions = mutableMapOf<String, List<KissAction>>()
 
     /** Global doll loader. This loads pretty much everything found in the current CNF. */
     @Suppress("RegExpRedundantClassElement")
@@ -102,10 +113,6 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 "fixcatch",
                 "fixdrop",
                 "setfix",
-                "in",
-                "out",
-                "collide",
-                "apart",
                 "notify",
                 "set",
                 "gosub",
@@ -119,10 +126,19 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 "exitevent",
                 "shell",
                 "changecol",
-                "setkcf"
+                "col",
+                "setkcf",
+                "ifmoved",
+                "ifnotmoved",
+                "initialize",
+                "stillin",
+                "stillout",
+                "move",
+                "windowsize",
+                "viewport",
             )
 
-            val hasForbiddenWord = forbidden.any { cleaned.contains(it) && !cleaned.contains("begin") }
+            val hasForbiddenWord = forbidden.any { cleaned.contains(it) }
 
             val actionRegex = Regex("""(\w+)\s*\(([^)]+)\)""")
 
@@ -132,15 +148,23 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
             val isAlarmLine = cleaned.contains("alarm(", ignoreCase = true)
             val isPressLine = cleaned.contains("press(", ignoreCase = true)
             val isReleaseLine = cleaned.contains("release(", ignoreCase = true)
-            val isInLine = cleaned.contains("in(", ignoreCase = true) && !cleaned.contains("begin(", ignoreCase = true)
+            val isFixCatchLine = cleaned.contains("fixcatch(", ignoreCase = true)
+            val isFixDropLine = cleaned.contains("fixdrop(", ignoreCase = true)
+            val isCatchLine = cleaned.contains("catch(", ignoreCase = true)
+            val isDropLine = cleaned.contains("drop(", ignoreCase = true)
+            val isInLine = cleaned.contains("in(", ignoreCase = true) && !cleaned.contains("begin(", ignoreCase = true) && !cleaned.contains("stillin(", ignoreCase = true)
+            val isOutLine = cleaned.contains("out(", ignoreCase = true) && !cleaned.contains("stillout(", ignoreCase = true)
+            val isStillInLine = cleaned.contains("stillin(", ignoreCase = true)
+            val isStillOutLine = cleaned.contains("stillout(", ignoreCase = true)
             val isCollideLine = cleaned.contains("collide(", ignoreCase = true)
             val isApartLine = cleaned.contains("apart(", ignoreCase = true)
             val isSetLine = cleaned.contains("set(", ignoreCase = true)
             val isUnfixLine = cleaned.contains("unfix(", ignoreCase = true)
             val isLabelLine = cleaned.contains("label(", ignoreCase = true)
+            val isColLine = cleaned.contains("col(", ignoreCase = true) && !cleaned.contains("changecol(", ignoreCase = true)
 
             val isNewHeader =
-                startsWithAt || isInLine || isPressLine || isReleaseLine || isCollideLine || isApartLine || isSetLine || isAlarmLine || isUnfixLine || isLabelLine || (cleaned.contains("(") && !hasForbiddenWord)
+                startsWithAt || isInLine || isOutLine || isStillInLine || isStillOutLine || isPressLine || isReleaseLine || isCatchLine || isDropLine || isFixCatchLine || isFixDropLine || isCollideLine || isApartLine || isSetLine || isAlarmLine || isUnfixLine || isLabelLine || isColLine || (cleaned.contains("(") && !hasForbiddenWord)
             val isOldHeader = lowerLine.startsWith("begin") || lowerLine.startsWith("end")
 
             // Special events
@@ -160,13 +184,21 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 currentEventName = when {
                     isPressLine -> "press($raw)"
                     isReleaseLine -> "release($raw)"
+                    isFixCatchLine -> "fixcatch($raw)"
+                    isFixDropLine -> "fixdrop($raw)"
+                    isCatchLine -> "catch($raw)"
+                    isDropLine -> "drop($raw)"
                     isAlarmLine -> "alarm($raw)"
                     isCollideLine -> "collide($raw)"
                     isApartLine -> "apart($raw)"
                     isInLine -> "in($raw)"
+                    isOutLine -> "out($raw)"
+                    isStillInLine -> "stillin($raw)"
+                    isStillOutLine -> "stillout($raw)"
                     isSetLine -> "set($raw)"
                     isUnfixLine -> "unfix($raw)"
                     isLabelLine -> "label($raw)"
+                    isColLine -> "col($raw)"
                     isOldHeader -> cleaned.substringAfter("begin").trim().lowercase()
                     cleaned.lowercase().contains("initialize") -> "initialize"
                     else -> cleaned.removePrefix(";").removePrefix("@").substringBefore("(").trim()
@@ -196,8 +228,12 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
 
                     if (cmd == "drop" && cleaned.contains("drop(")) return@forEach
 
+                    if (cmd == "stillin" && cleaned.contains("stillin(")) return@forEach
+
+                    if (cmd == "stillout" && cleaned.contains("stillout(")) return@forEach
+
                     // Skip the header itself
-                    if ((cmd == "press" || cmd == "release" || cmd == "in" || cmd == "out" || cmd == "collide" || cmd == "apart") && cleaned.contains("$cmd(")) {
+                    if ((cmd == "press" || cmd == "release" || cmd == "catch" || cmd == "drop" || cmd == "fixcatch" || cmd == "fixdrop" || cmd == "in" || cmd == "out" || cmd == "collide" || cmd == "apart") && cleaned.contains("$cmd(")) {
                         val triggerId = rawParams.replace("#", "").trim()
                         if (currentEventName?.contains(triggerId) == true) return@forEach
                     }
@@ -244,8 +280,18 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                         "shell" -> ActionType.SHELL
                         "exitevent" -> ActionType.EXITEVENT
                         "changecol" -> ActionType.CHANGECOL
+                        "col" -> ActionType.COL
                         "setkcf" -> ActionType.SETKCF
                         "quit" -> ActionType.QUIT
+                        "ifmoved" -> ActionType.IFMOVED
+                        "ifnotmoved" -> ActionType.IFNOTMOVED
+                        "stillin" -> ActionType.STILLIN
+                        "stillout" -> ActionType.STILLOUT
+                        "moverandx" -> ActionType.MOVERANDX
+                        "moverandy" -> ActionType.MOVERANDY
+                        "movetorand" -> ActionType.MOVETORAND
+                        "windowsize" -> ActionType.WINDOWSIZE
+                        "viewport" -> ActionType.VIEWPORT
                         else -> null
                     }
 
@@ -337,8 +383,18 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                         "shell" -> ActionType.SHELL
                         "exitevent" -> ActionType.EXITEVENT
                         "changecol" -> ActionType.CHANGECOL
+                        "col" -> ActionType.COL
                         "setkcf" -> ActionType.SETKCF
                         "quit" -> ActionType.QUIT
+                        "ifmoved" -> ActionType.IFMOVED
+                        "ifnotmoved" -> ActionType.IFNOTMOVED
+                        "stillin" -> ActionType.STILLIN
+                        "stillout" -> ActionType.STILLOUT
+                        "moverandx" -> ActionType.MOVERANDX
+                        "moverandy" -> ActionType.MOVERANDY
+                        "movetorand" -> ActionType.MOVETORAND
+                        "windowsize" -> ActionType.WINDOWSIZE
+                        "viewport" -> ActionType.VIEWPORT
                         else -> null
                     }
 
@@ -376,11 +432,18 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
             .replace("#", "")
             .lowercase()
             .removeSuffix(".cel")
-        if (name.contains("press", ignoreCase = true) || name.contains("catch", ignoreCase = true) || name.contains(
-                "fixcatch", ignoreCase = true)) {
+        if (name.contains("press", ignoreCase = true)) {
             pressActions[cleanTrigger] = currentEventActions.toList()
-        } else if (name.contains("release", ignoreCase = true) || name.contains("drop", ignoreCase = true) || name.contains("fixdrop", ignoreCase = true)) {
+        } else if (name.contains("release", ignoreCase = true)) {
             releaseActions[cleanTrigger] = currentEventActions.toList()
+        } else if (name.contains("catch", ignoreCase = true) && !name.contains("fixcatch", ignoreCase = true)) {
+            catchActions[cleanTrigger] = currentEventActions.toList()
+        } else if (name.contains("drop", ignoreCase = true) && !name.contains("fixdrop", ignoreCase = true)) {
+            dropActions[cleanTrigger] = currentEventActions.toList()
+        } else if (name.contains("fixcatch", ignoreCase = true)) {
+            fixCatchActions[cleanTrigger] = currentEventActions.toList()
+        } else if (name.contains("fixdrop", ignoreCase = true)) {
+            fixDropActions[cleanTrigger] = currentEventActions.toList()
         } else if (name.equals("in", ignoreCase = true)) {
             inActions[cleanTrigger] = snapRules.toList()
             inEventActions[cleanTrigger] = currentEventActions.toList()
@@ -389,11 +452,17 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
         } else if (name.contains("apart", ignoreCase = true)) {
             apartActions[cleanTrigger] = currentEventActions.toList()
         } else if (name.contains("set", ignoreCase = true) && !name.contains("setfix", ignoreCase = true)) {
-            setActions[rawTrigger] = currentEventActions.toList()
+            setActions[cleanTrigger] = currentEventActions.toList()
         } else if (name.contains("unfix", ignoreCase = true)) {
             unfixActions[cleanTrigger] = currentEventActions.toList()
         } else if (name.contains("label", ignoreCase = true)) {
             labelActions[cleanTrigger] = currentEventActions.toList()
+        } else if (name.contains("stillin", ignoreCase = true)) {
+            stillInActions[cleanTrigger] = currentEventActions.toList()
+        } else if (name.contains("stillout", ignoreCase = true)) {
+            stillOutActions[cleanTrigger] = currentEventActions.toList()
+        } else if (name.contains("col", ignoreCase = true) && !name.contains("collide", ignoreCase = true)) {
+            colActions[cleanTrigger] = currentEventActions.toList()
         } else {
             eventActions[name.lowercase().replace(" ", "")] = currentEventActions.toList()
         }
@@ -661,13 +730,23 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 "shell" -> ActionType.SHELL
                 "exitevent" -> ActionType.EXITEVENT
                 "changecol" -> ActionType.CHANGECOL
+                "col" -> ActionType.COL
                 "setkcf" -> ActionType.SETKCF
                 "quit" -> ActionType.QUIT
+                "ifmoved" -> ActionType.IFMOVED
+                "ifnotmoved" -> ActionType.IFNOTMOVED
+                "stillin" -> ActionType.STILLIN
+                "stillout" -> ActionType.STILLOUT
+                "moverandx" -> ActionType.MOVERANDX
+                "moverandy" -> ActionType.MOVERANDY
+                "movetorand" -> ActionType.MOVETORAND
+                "windowsize" -> ActionType.WINDOWSIZE
+                "viewport" -> ActionType.VIEWPORT
                 else -> null
             }
 
             val finalTarget = when (type) {
-                ActionType.MOVE, ActionType.MOVETO, ActionType.MOVEBYX, ActionType.MOVEBYY -> {
+                ActionType.MOVE, ActionType.MOVETO, ActionType.MOVEBYX, ActionType.MOVEBYY, ActionType.MOVETORAND, ActionType.MOVERANDX, ActionType.MOVERANDY -> {
                     // Resolve to #ID
                     if (rawTarget.startsWith("#")) rawTarget
                     else "#$resolvedTarget"
@@ -760,9 +839,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                     val parts = clean.substringAfter("movebyx(").substringBefore(")").split(",")
                     if (parts.size >= 3) {
                         val obj = parts[0].replace("#", "").trim().toIntOrNull()
-                            //?: activeCollisionPair!!.first
                         val anchor = parts[1].replace("#", "").trim().toIntOrNull()
-                            //?: activeCollisionPair!!.second
                         val x = parts[2].trim().toIntOrNull() ?: 0
                         updateOrAddRule(obj ?: 0, anchor ?: 0, x, null)
                     }
@@ -771,9 +848,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                     val parts = clean.substringAfter("movebyy(").substringBefore(")").split(",")
                     if (parts.size >= 3) {
                         val obj = parts[0].replace("#", "").trim().toIntOrNull()
-                            //?: activeCollisionPair!!.first
                         val anchor = parts[1].replace("#", "").trim().toIntOrNull()
-                            //?: activeCollisionPair!!.second
                         val y = parts[2].trim().toIntOrNull() ?: 0
                         updateOrAddRule(obj ?: 0, anchor ?: 0, null, y)
                     }
@@ -837,5 +912,4 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
     }
 
     val definedSetIndices = mutableSetOf<Int>()
-
 }

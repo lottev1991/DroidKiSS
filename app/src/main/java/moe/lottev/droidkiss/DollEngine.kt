@@ -1,7 +1,10 @@
+@file:Suppress("UnusedImport")
+
 package moe.lottev.droidkiss
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -39,19 +42,18 @@ class DollEngine(context: Context,
         return withContext(Dispatchers.IO) {
             val lha = repo.loadLzh(uri) ?: return@withContext emptyMap()
             val zip = repo.loadZip(uri) ?: return@withContext emptyMap()
-            val entries =
+            val lhaEntries =
                 (lha.contents as? List<*>)?.filterIsInstance<ArchiveEntry>() ?: emptyList()
             val zipEntries =
                 (zip.contents as? List<*>)?.filterIsInstance<ArchiveEntry>() ?: emptyList()
+            val entries = lhaEntries + zipEntries
             val map = mutableMapOf<String, ByteArray>()
 
             entries.forEach { entry ->
-                repo.extractLhaEntry(lha, entry)?.let { bytes ->
+                repo.extractZipEntry(zip, entry)?.let { bytes ->
                     map[entry.name] = bytes
                 }
-            }
-            zipEntries.forEach { entry ->
-                repo.extractZipEntry(zip, entry)?.let { bytes ->
+                repo.extractLhaEntry(lha, entry)?.let { bytes ->
                     map[entry.name] = bytes
                 }
             }
@@ -156,6 +158,16 @@ class DollEngine(context: Context,
                 ?: paletteList.firstOrNull()
             val paletteToUse = assignedPaletteBanks?.getOrNull(0)
 
+            val kcfName = requiredPalettes.getOrNull(descriptor.paletteIndex)
+            val kcfBytes =
+                cache.keys.firstOrNull { it.equals(kcfName, ignoreCase = true) }?.let { cache[it] }
+
+            val groups = if (kcfBytes != null) {
+                paletteDecoder.decodeAllBanks(kcfBytes)
+            } else {
+                emptyList()
+            }
+
             val initialAlphaInCompose = 1f - (descriptor.initialAlpha / 255f)
             val entry =
                 cache.keys.firstOrNull { it.equals(descriptor.fileName, ignoreCase = true) }
@@ -188,6 +200,8 @@ class DollEngine(context: Context,
                 y = finalY,
                 fileName = entry,
                 alpha = initialAlphaInCompose,
+                paletteGroups = groups,
+                bitDepth = result.bitDepth
             )
         }
 

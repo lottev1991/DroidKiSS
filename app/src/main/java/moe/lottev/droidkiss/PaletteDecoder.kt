@@ -1,4 +1,8 @@
+@file:Suppress("UnusedImport")
+
 package moe.lottev.droidkiss
+
+import android.util.Log
 
 /** KiSS palette (KCF) decoder. */
 class PaletteDecoder {
@@ -25,7 +29,8 @@ class PaletteDecoder {
                 else -> 16
             }
 
-            val palette = IntArray(256)
+            val palette = IntArray(colorsInThisBank)
+
             for (c in 0 until colorsInThisBank) {
                 if (cursor + bytesPerColor > bytes.size) break
 

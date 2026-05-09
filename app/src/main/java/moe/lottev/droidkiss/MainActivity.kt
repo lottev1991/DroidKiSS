@@ -74,6 +74,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -548,7 +549,10 @@ fun DollScreen(viewModel: ViewModel, onLaunchPicker: () -> Unit) {
         topBar = {
             when (state) {
                 is ViewModel.KissUiState.Loaded -> {
-                    DollMenu(viewModel, onLaunchPicker)
+                    Row(horizontalArrangement = Arrangement.SpaceAround){
+                        DollMenu(viewModel, onLaunchPicker)
+                        PaletteMenu(viewModel)
+                    }
                     SetButtons(viewModel)
                 }
                 else -> {}
@@ -734,6 +738,8 @@ fun DollCanvas(doll: KissDoll, viewModel: ViewModel, graphicsLayer: GraphicsLaye
                             val hitLayer =
                                 doll.layers.find { it.descriptor.objectId == id } ?: return@let
                             viewModel.executeReleaseActions(hitLayer)
+                            viewModel.executeDropActions(hitLayer)
+                            viewModel.executeFixDropActions(hitLayer)
                             viewModel.handleDrop(id)
                             viewModel.checkCollideApart(id)
                             viewModel.configParser.parseInActions(id.toString())
@@ -821,9 +827,15 @@ fun DollCanvas(doll: KissDoll, viewModel: ViewModel, graphicsLayer: GraphicsLaye
                                     waitForUpOrCancellation()
                                 } else if (!wasDragInitiated) {
                                     // --- NO TIMEOUT, NO DRAG: This is a Tap ---
+                                    viewModel.executeFixCatchActions(hitLayer)
                                     viewModel.executePressActions(hitLayer)
+                                    viewModel.executeCatchActions(hitLayer)
                                     viewModel.executeReleaseActions(hitLayer)
+                                    viewModel.executeDropActions(hitLayer)
+                                    viewModel.executeFixDropActions(hitLayer)
                                     viewModel.revertPressActions(objectId)
+                                    viewModel.revertCatchActions(objectId)
+                                    viewModel.revertFixCatchActions(objectId)
                                 }
                                 // If wasDragInitiated is true, we do nothing and let the drag gesture start.
                             }
@@ -838,7 +850,7 @@ fun DollCanvas(doll: KissDoll, viewModel: ViewModel, graphicsLayer: GraphicsLaye
                     // It's not unmapped OR
                     // It is currently being forced visible by a PRESS action
                     val isCurrentlyMapped =
-                        !layer.descriptor.isUnmapped || viewModel.activePressIds.contains(layer.descriptor.objectId)
+                        !layer.descriptor.isUnmapped || viewModel.activePressIds.contains(layer.descriptor.objectId) || viewModel.activeCatchIds.contains(layer.descriptor.objectId) || viewModel.activeFixCatchIds.contains(layer.descriptor.objectId)
 
                     // AND it must belong to the current set (or be a base item)
                     val isInSet = layer.descriptor.allowedSets.isEmpty() ||
@@ -1049,6 +1061,43 @@ fun DollMenu(viewModel: ViewModel, onLaunchPicker: () -> Unit) {
                     showDialog = true
                 }
             )
+        }
+    }
+}
+
+/** Palette menu. This is where users can select palette groups (0-9). */
+@Composable
+fun PaletteMenu(viewModel: ViewModel) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(
+        contentAlignment = Alignment.BottomStart,
+        modifier = Modifier.verticalScroll(rememberScrollState())
+    ) {
+        IconButton(
+            colors = IconButtonDefaults.iconButtonColors(
+                contentColor = MaterialTheme.colorScheme.inverseSurface,
+            ),
+            onClick = { expanded = true }) {
+            Icon(
+                Icons.Filled.ColorLens,
+                contentDescription = "palette menu (REPLACE WITH LOCALIZED STRING)",
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+        ) {
+            (0..9).forEach { palNum ->
+                DropdownMenuItem(
+                    text = { Text("${stringResource(R.string.palette_select)}$palNum") },
+                    onClick = {
+                        viewModel.changeCol(palNum.toString())
+                        expanded = false
+                    }
+                )
+            }
         }
     }
 }

@@ -1,3 +1,5 @@
+@file:Suppress("UnusedImport")
+
 package moe.lottev.droidkiss
 
 import android.app.Application
@@ -5,10 +7,11 @@ import androidx.compose.runtime.*
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import android.content.Context
-import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.Rect
 import androidx.compose.ui.graphics.Color
 import android.net.Uri
+import android.util.Log
 import androidx.compose.ui.geometry.Offset
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +30,9 @@ import kotlinx.coroutines.withContext
 import kotlin.text.contains
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlin.collections.component1
+import kotlin.collections.forEach
+import kotlin.text.equals
 
 /** This is the viewmodel. A viewmodel bridges backend functionality with the frontend (see MainActivity.kt). */
 class ViewModel(application: Application) :
@@ -356,39 +362,7 @@ class ViewModel(application: Application) :
             layer.x = base.first + layer.descriptor.celOffsetX
             layer.y = base.second + layer.descriptor.celOffsetY
         }
-
-        // FKISS Logic (Context-Aware)
-        val allLines = content.split(Regex("\\r?\\n"))
-
-        var currentActiveContext: Int? = null
-
-        allLines.forEach { line ->
-            val trimmed = line.trim().lowercase()
-
-            // If the line is NOT a KiSS command line, KILL the context.
-            if (!trimmed.startsWith("@") && !trimmed.startsWith(";@")) {
-                currentActiveContext = null
-                return@forEach
-            }
-
-            // Update context ONLY if 'set()' is found
-            val setMatch = Regex("set\\s*\\(\\s*(\\d+)\\s*\\)").find(trimmed)
-            if (setMatch != null) {
-                currentActiveContext = setMatch.groupValues[1].toIntOrNull()
-            }
-
-            // EXECUTION: Only run if it's the target set
-            if (currentActiveContext == newSet || currentActiveContext == 0) {
-                // Only run actions, ignore the triggers themselves (press)
-                // Blacklisting "altmap" is important, otherwise it will think "altmap" = "map"
-                if (!trimmed.contains("press(") && !trimmed.contains("altmap(") && !trimmed.contains(
-                        "release("
-                    )
-                ) {
-                    processActionLine(trimmed)
-                }
-            }
-        }
+        checkCollisionsOnSetLoad() // stillin, stillout
         executeSetActions(newSet.toString())
         // This forces the Compose UI to redraw with the new coordinate/offset context
         refreshTrigger++
@@ -405,34 +379,6 @@ class ViewModel(application: Application) :
         return configParser.definedSetIndices.toList().sorted()
     }
 
-    /** Processes FKiSS action lines */
-    fun processActionLine(line: String) {
-        // This Regex is the "Space Killer."
-        // It captures: 1. The Command, 2. The Target/Params
-        val actionRegex = Regex("([a-zA-Z]+)\\s*\\(([^)]*)\\)")
-
-        val actions = actionRegex.findAll(line)
-
-        actions.forEach { match ->
-            val command = match.groupValues[1].lowercase()
-            val rawContent = match.groupValues[2]
-
-            // Split by comma for commands like transparent(target, value)
-            // Then strip quotes and extra whitespace from each piece
-            val params = rawContent.split(",").map { it.replace("\"", "").trim() }
-            val target = params.getOrNull(0) ?: ""
-
-            when (command) {
-                "unmap" -> setMapping(target, true)
-                "map" -> setMapping(target, false)
-                "altmap" -> altMapping(target)
-                "timer" -> executeEvent("timer($target)")
-                // Add other commands as needed (TODO)
-            }
-
-        }
-    }
-
     /** Drop even handler */
     fun handleDrop(draggedId: Int) {
         val doll = currentDoll ?: return
@@ -442,18 +388,14 @@ class ViewModel(application: Application) :
 
         rules.forEach { rule ->
             val snapLayer =
-                doll.layers.find { it.descriptor.objectId == rule.snapObj } ?: return@forEach
-
-            if (snapLayer.descriptor.isUnmapped) return@forEach
+                doll.layers.find { it.descriptor.objectId == rule.snapObj && !it.descriptor.isUnmapped } ?: return@forEach
 
             val layers = doll.layers
 
             if (rule.isRelative) {
-                val anchorLayer = doll.layers.find { it.descriptor.objectId == rule.triggerObj }
+                val anchorLayer = doll.layers.find { it.descriptor.objectId == rule.triggerObj && !it.descriptor.isUnmapped }
                     ?: return@forEach
                 val anchorOffset = currentOffsets[rule.triggerObj] ?: Offset.Zero
-
-                if (anchorLayer.descriptor.isUnmapped) return@forEach
 
                 // Find the Anchor's VISUAL origin (Top-left of pixels)
                 val anchorVisualX =
@@ -665,6 +607,38 @@ class ViewModel(application: Application) :
                     }
                     return true
                 }
+                ActionType.IFMOVED -> {
+                    val target = action.target.replace("#", "").lowercase()
+                    val targetId = target.toIntOrNull()
+                    val targetLayer = currentDoll?.layers?.find { layer ->
+                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
+                        if (targetId != null) layer.descriptor.objectId == targetId else layerName == target
+                    }
+
+                    if (targetLayer != null) {
+                        val currentOffset = currentOffsets[targetId] ?: Offset.Zero
+                        if (currentOffset != Offset.Zero) {
+                            fireSpecialTimer(action)
+                        }
+                    }
+                    return true
+                }
+                ActionType.IFNOTMOVED -> {
+                    val target = action.target.replace("#", "").lowercase()
+                    val targetId = target.toIntOrNull()
+                    val targetLayer = currentDoll?.layers?.find { layer ->
+                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
+                        if (targetId != null) layer.descriptor.objectId == targetId else layerName == target
+                    }
+
+                    if (targetLayer != null) {
+                        val currentOffset = currentOffsets[targetId] ?: Offset.Zero
+                        if (currentOffset == Offset.Zero) {
+                            fireSpecialTimer(action)
+                        }
+                    }
+                    return true
+                }
                 ActionType.TIMER -> {
                     fireTimer(action)
                     return true
@@ -692,6 +666,48 @@ class ViewModel(application: Application) :
                         if (targetId != null) layer.descriptor.objectId == targetId else layerName == target
                     }
                     targetLayer?.let { executeReleaseActions(it) }
+                    return true
+                }
+                ActionType.CATCH -> {
+                    val target = action.target.replace("#", "").lowercase()
+                    val targetId = target.toIntOrNull()
+                    val targetLayer = currentDoll?.layers?.find { layer ->
+                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
+                        if (targetId != null) layer.descriptor.objectId == targetId else layerName == target
+                    }
+                    targetLayer?.let { executeCatchActions(it) }
+                    return true
+                }
+
+                ActionType.DROP -> {
+                    val target = action.target.replace("#", "").lowercase()
+                    val targetId = target.toIntOrNull()
+                    val targetLayer = currentDoll?.layers?.find { layer ->
+                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
+                        if (targetId != null) layer.descriptor.objectId == targetId else layerName == target
+                    }
+                    targetLayer?.let { executeDropActions(it) }
+                    return true
+                }
+                ActionType.FIXCATCH -> {
+                    val target = action.target.replace("#", "").lowercase()
+                    val targetId = target.toIntOrNull()
+                    val targetLayer = currentDoll?.layers?.find { layer ->
+                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
+                        if (targetId != null) layer.descriptor.objectId == targetId else layerName == target
+                    }
+                    targetLayer?.let { executeFixCatchActions(it) }
+                    return true
+                }
+
+                ActionType.FIXDROP -> {
+                    val target = action.target.replace("#", "").lowercase()
+                    val targetId = target.toIntOrNull()
+                    val targetLayer = currentDoll?.layers?.find { layer ->
+                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
+                        if (targetId != null) layer.descriptor.objectId == targetId else layerName == target
+                    }
+                    targetLayer?.let { executeFixDropActions(it) }
                     return true
                 }
                 ActionType.ALARM -> {
@@ -756,6 +772,14 @@ class ViewModel(application: Application) :
                 }
                 ActionType.MOVEBYX, ActionType.MOVEBYY -> {
                     moveRelative(action)
+                    return true
+                }
+                ActionType.MOVERANDX, ActionType.MOVERANDY -> {
+                    moveRelativeRandom(action)
+                    return true
+                }
+                ActionType.MOVETORAND -> {
+                    moveToRandom(action)
                     return true
                 }
 
@@ -882,12 +906,8 @@ class ViewModel(application: Application) :
                     return true
                 }
                 ActionType.CHANGECOL -> {
-                    val targetIndex = action.target.toIntOrNull() ?: 0
-                    val doll = currentDoll
-
-                    if (doll != null) {
-                        doll.activeGlobalBank = targetIndex
-                    }
+                    changeCol(action.target)
+                    refreshTrigger++
                     return true
                 }
                 ActionType.SETKCF -> {
@@ -910,10 +930,32 @@ class ViewModel(application: Application) :
                     }
                     return true
                 }
-                ActionType.QUIT -> {
-                    if (uiState is KissUiState.Loaded) {
-                        uiState = KissUiState.Empty
+                ActionType.WINDOWSIZE -> {
+                    val newWidth = action.target.toIntOrNull() ?: 0
+                    val newHeight = action.valueStr.toIntOrNull() ?: 0
+                    val doll = currentDoll
+
+                    if (doll != null) {
+                        doll.envWidth = newWidth
+                        doll.envHeight = newHeight
                     }
+                    return true
+                }
+                ActionType.VIEWPORT -> {
+                    val doll = currentDoll
+                    val viewportOffsetX = action.target.toFloatOrNull() ?: 0f
+                    val viewportOffsetY = action.valueStr.toFloatOrNull() ?: 0f
+                    if (doll != null) {
+                        val allLayers = doll.layers
+                        allLayers.forEach {layer ->
+                            val objId = layer.descriptor.objectId
+                            currentOffsets[objId] = Offset(viewportOffsetX, viewportOffsetY)
+                        }
+                    }
+                    return true
+                }
+                ActionType.QUIT -> {
+                    closeArchive()
                     return false
                 }
                 else -> return true
@@ -922,6 +964,85 @@ class ViewModel(application: Application) :
             e.printStackTrace()
         }
         return true
+    }
+
+    /** Changes current palette group. Used for `changecol` FKiSS events, as well as manual palette group changes from the menu. */
+    fun changeCol(groupStr: String) {
+        val doll = currentDoll ?: return
+        val groupNum = groupStr.toIntOrNull() ?: 0
+
+        doll.activeGlobalBank = groupNum
+
+        doll.layers.forEach { layer ->
+            val newPalette =
+                layer.paletteGroups.getOrElse(groupNum) { layer.paletteGroups.firstOrNull() }
+            if (newPalette != null) {
+                rebakeLayer(
+                    layer, newPalette,
+                )
+            }
+        }
+        executeColActions(groupStr)
+        refreshTrigger++
+    }
+
+    /** Redraw layer after changing palette group */
+    fun rebakeLayer(layer: KissLayer, palette: IntArray) {
+        val width = layer.width
+        val height = layer.height
+        val pixels = IntArray(width * height)
+        val data = layer.rawIndices
+
+        // Check if we are dealing with an 8-bit (256-color) or 4-bit (16-color) layer
+        // 8-bit data size is usually Width * Height
+        // 4-bit data size is usually (Width * Height + 1) / 2
+        val is8Bit = palette.size > 16
+
+        if (layer.bitDepth == 32 && palette.isNotEmpty()) {
+            var cursor = 0
+            for (i in pixels.indices) {
+                if (cursor + 3 >= data.size) break
+
+                // We MUST reconstruct the Int from the 4 bytes in the ByteArray
+                val b = data[cursor++].toInt() and 0xFF
+                val g = data[cursor++].toInt() and 0xFF
+                val r = data[cursor++].toInt() and 0xFF
+                val a = data[cursor++].toInt() and 0xFF
+
+                pixels[i] = (a shl 24) or (r shl 16) or (g shl 8) or b
+            }
+        } else if (is8Bit) {
+            // 8-Bit Path: One byte = One pixel
+            for (i in 0 until (width * height)) {
+                if (i >= data.size) break
+                val colorIndex = data[i].toInt() and 0xFF
+
+                // Rule: Color 0 is always transparent
+                pixels[i] = if (colorIndex == 0) 0 else palette.getOrElse(colorIndex) { 0 }
+            }
+        } else {
+            // 4-Bit Path: One byte = Two pixels (Packed Nibbles)
+            var cursor = 0
+            for (y in 0 until height) {
+                for (x in 0 until width step 2) {
+                    if (cursor >= data.size) break
+                    val byte = data[cursor++].toInt() and 0xFF
+
+                    // Pixel 1 (High Nibble)
+                    val idx1 = (byte ushr 4) and 0x0F
+                    pixels[y * width + x] = if (idx1 == 0) 0 else palette.getOrElse(idx1) { 0 }
+
+                    // Pixel 2 (Low Nibble) - only if within row width
+                    if (x + 1 < width) {
+                        val idx2 = byte and 0x0F
+                        pixels[y * width + x + 1] =
+                            if (idx2 == 0) 0 else palette.getOrElse(idx2) { 0 }
+                    }
+                }
+            }
+        }
+
+        layer.bitmap = Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)
     }
 
     fun isPixelCollisionWithOffset(
@@ -1033,6 +1154,7 @@ class ViewModel(application: Application) :
                     if (isRectOverlapping) {
                         activeCollisionPairs.add(stateKey)
                         executeEvent(eventKey)
+                        executeStillInActions(srcLayer, dstLayer)
                     }
                 }
 
@@ -1041,6 +1163,7 @@ class ViewModel(application: Application) :
                     if (!isRectOverlapping) {
                         activeCollisionPairs.remove(stateKey)
                         executeEvent(eventKey)
+                        executeStillOutActions(srcLayer, dstLayer)
                     }
                 }
 
@@ -1064,12 +1187,78 @@ class ViewModel(application: Application) :
             }
 
             // Cleanup the latch
-            if (!isRectOverlapping && (type == "in" || type == "out")) activeCollisionPairs.remove(
-                stateKey
+            if (!isRectOverlapping && (type == "in" || type == "out")) {
+                activeCollisionPairs.remove(stateKey)
+                executeStillOutActions(srcLayer, dstLayer)
+            }
+
+            if (!isOverlapping && (type == "collide" || type == "apart")) {
+                activeCollisionPairs.remove(stateKey)
+                executeStillOutActions(srcLayer, dstLayer)
+            }
+        }
+    }
+
+    fun evaluateCollisionState(
+        eventKey: String,
+        srcLayer: KissLayer,
+        dstLayer: KissLayer
+    ): Boolean {
+        // Use your getBounds method here
+        val r1 = srcLayer.getBounds(currentOffsets[srcLayer.descriptor.objectId] ?: Offset.Zero)
+        val r2 = dstLayer.getBounds(currentOffsets[dstLayer.descriptor.objectId] ?: Offset.Zero)
+
+        val isRectOverlapping = Rect.intersects(r1, r2)
+
+        // Pixel-perfect check
+        return if (eventKey.contains("collide") || eventKey.contains("apart")) {
+            isPixelCollisionWithOffset(
+                srcLayer,
+                currentOffsets[srcLayer.descriptor.objectId] ?: Offset.Zero,
+                dstLayer
             )
-            if (!isOverlapping && (type == "collide" || type == "apart")) activeCollisionPairs.remove(
-                stateKey
-            )
+        } else {
+            isRectOverlapping
+        }
+    }
+
+    fun checkCollisionsOnSetLoad() {
+        val doll = currentDoll ?: return
+
+        configParser.eventActions.keys.forEach { eventKey ->
+            // 1. Parse the key to find the two involved layers
+            val parts = eventKey.split("_")
+            if (parts.size < 3) return@forEach
+
+            val triggerSrc = parts[1]
+            val triggerDst = parts[2]
+
+            val srcLayer = doll.layers.find {
+                it.descriptor.objectId.toString() == triggerSrc || it.descriptor.fileName.equals(
+                    triggerSrc,
+                    true
+                )
+            } ?: return@forEach
+            val dstLayer = doll.layers.find {
+                it.descriptor.objectId.toString() == triggerDst || it.descriptor.fileName.equals(
+                    triggerDst,
+                    true
+                )
+            } ?: return@forEach
+
+            // 2. Evaluate
+            val isColliding = evaluateCollisionState(eventKey, srcLayer, dstLayer)
+            val stateKey = "active_$eventKey"
+
+            // 3. Set the latch without firing the event (or fire if that's what you want)
+            if (isColliding) {
+                activeCollisionPairs.add(stateKey)
+                // If you want "StillIn" to fire on load when they are already overlapping:
+                executeStillInActions(srcLayer, dstLayer)
+            } else {
+                activeCollisionPairs.remove(stateKey)
+                executeStillOutActions(srcLayer, dstLayer)
+            }
         }
     }
 
@@ -1106,24 +1295,61 @@ class ViewModel(application: Application) :
         }
     }
 
+    /** `moverandx()`/`moverandy()` FKiSS events (random relative move from self). */
+    fun moveRelativeRandom(action: KissAction) {
+        val movingId = action.target.replace("#", "").toIntOrNull() ?: return
+
+        val min = action.valueStr.toLongOrNull() ?: 0L
+        val max = action.extraValue.toLongOrNull() ?: min
+
+        val currentOffset = currentOffsets[movingId] ?: Offset.Zero
+
+        val randomOffset = if (min < max) (min..max).random() else min
+
+        if (action.type == ActionType.MOVERANDX) {
+            currentOffsets[movingId] = Offset(randomOffset.toFloat(), currentOffset.y)
+        } else {
+            currentOffsets[movingId] = Offset(currentOffset.x, randomOffset.toFloat())
+        }
+    }
+
     /** `move()` FKiSS event (relative move from self). No idea if this works properly yet; further testing needed. */
     fun moveRelativeFromSelf(action: KissAction) {
         val movingId = action.target.replace("#", "").toIntOrNull() ?: return
-        val parts = action.valueStr.split(",").map { it.trim().replace("#", "") }
-        val offsetVal = if (parts.size > 1) parts[1].toFloatOrNull() ?: 0f else 0f
 
+        val moveX = action.valueStr.toIntOrNull() ?: 0
+        val moveY = action.extraValue.toIntOrNull() ?: 0
+
+        val targetBaseX = (currentOffsets[movingId]?.x ?: 0f)
+        val targetBaseY = (currentOffsets[movingId]?.y ?: 0f)
+        currentOffsets[movingId] = Offset(targetBaseX + moveX, targetBaseY + moveY)
+    }
+
+    /** `movetorand()` (move randomly across the entire playfield). */
+    fun moveToRandom(action: KissAction) {
         val doll = currentDoll ?: return
-        val movingLayer =
-            doll.layers.find { it.descriptor.objectId == movingId } ?: return
+        val movingId = action.target.replace("#", "").toIntOrNull() ?: return
 
-        val celCorrectionX = movingLayer.descriptor.celOffsetX
-        val celCorrectionY = movingLayer.descriptor.celOffsetY
+        val objectLayers =
+            doll.layers.asReversed()
+                .filter { it.descriptor.objectId == movingId && !it.descriptor.isUnmapped }
 
-        val targetBaseX = movingLayer.x + (currentOffsets[movingId]?.x ?: 0f)
-        val targetBaseY = movingLayer.y + (currentOffsets[movingId]?.y ?: 0f)
-        val targetAbsX = (targetBaseX + offsetVal) - celCorrectionX
-        val targetAbsY = (targetBaseY + offsetVal) - celCorrectionY
-        currentOffsets[movingId] = Offset(targetAbsX - movingLayer.x, targetAbsY - movingLayer.y)
+        val minBaseX = objectLayers.minOf { it.x }
+        val minBaseY = objectLayers.minOf { it.y }
+        val maxBaseX = objectLayers.maxOf { it.x + it.bitmap.width }
+        val maxBaseY = objectLayers.maxOf { it.y + it.bitmap.height }
+
+        val minAllowedOffsetH = -minBaseX
+        val minAllowedOffsetV = -minBaseY
+        val maxAllowedOffsetH = (doll.envWidth - maxBaseX)
+        val maxAllowedOffsetV = (doll.envHeight - maxBaseY)
+
+        val randomX = (minOf(minAllowedOffsetH, maxAllowedOffsetH)..maxOf(minAllowedOffsetH, maxAllowedOffsetH
+        )).random()
+        val randomY = (minOf(minAllowedOffsetV, maxAllowedOffsetV)..maxOf(minAllowedOffsetV, maxAllowedOffsetV
+        )).random()
+
+        currentOffsets[movingId] = Offset(randomX.toFloat(), randomY.toFloat())
     }
 
     /** Events to trigger upon switching sets. This can be archieved either through pressing the set buttons at the top, or though `changeset()` FKiSS events. */
@@ -1167,9 +1393,7 @@ class ViewModel(application: Application) :
         val fileName = hitLayer.descriptor.fileName.lowercase().substringBefore(".")
         val actions = (configParser.pressActions[objIdStr] ?: emptyList()) +
                 (configParser.pressActions[fileName] ?: emptyList())
-        actions.distinct().forEach {
-            performAction(it)
-        }
+        actions.distinct().forEach { performAction(it) }
         refreshTrigger++
     }
 
@@ -1204,6 +1428,121 @@ class ViewModel(application: Application) :
         refreshTrigger++
     }
 
+    val activeCatchIds = mutableStateListOf<Int>()
+    /**
+    `catch()` FKiSS event. Similar to `press()` events, except they only fire when an object is unfixed.
+     */
+    fun executeCatchActions(hitLayer: KissLayer) {
+        val objIdStr = hitLayer.descriptor.objectId.toString()
+        val fileName = hitLayer.descriptor.fileName.lowercase().substringBefore(".")
+        val actions = (configParser.catchActions[objIdStr] ?: emptyList()) +
+                (configParser.catchActions[fileName] ?: emptyList())
+
+        val objId = hitLayer.descriptor.objectId
+
+        val doll = currentDoll ?: return
+        val objectLayers =
+            doll.layers.filter { it.descriptor.objectId == objId }
+        val objectFixed = objectLayers.any { it.descriptor.isFixed }
+
+        if (!objectFixed) {
+            actions.distinct().forEach {
+                performAction(it)
+            }
+        }
+        refreshTrigger++
+    }
+
+    /**
+    When no `drop()` action happens, we revert the `catch()` event instead.
+     */
+    fun revertCatchActions(catchId: Int) {
+        val actions = configParser.catchActions[catchId.toString()] ?: return
+
+        // Remove the touched object
+        activeCatchIds.remove(catchId)
+        refreshTrigger++
+
+        // Reverse the associated mapping commands
+        actions.forEach { action ->
+            when (action.type) {
+                // Momentary Toggle: If MAP was called on press, call UNMAP on release
+                ActionType.MAP -> {
+                    val targetId = action.target.replace("#", "").toIntOrNull() ?: return@forEach
+                    activeCatchIds.remove(targetId)
+                    setMapping(action.target, false)
+                }
+
+                ActionType.UNMAP -> {
+                    // If it was hidden, bring it back
+                    setMapping(action.target, true)
+                }
+
+                else -> {}
+            }
+        }
+
+        refreshTrigger++
+    }
+
+    val activeFixCatchIds = mutableStateListOf<Int>()
+    /**
+    `fixcatch()` FKiSS event. Similar to `press()` events, except they only fire when an object is fixed.
+     */
+    fun executeFixCatchActions(hitLayer: KissLayer) {
+        val objIdStr = hitLayer.descriptor.objectId.toString()
+        val fileName = hitLayer.descriptor.fileName.lowercase().substringBefore(".")
+        val actions = (configParser.fixCatchActions[objIdStr] ?: emptyList()) +
+                (configParser.fixCatchActions[fileName] ?: emptyList())
+
+        val objId = hitLayer.descriptor.objectId
+
+        val doll = currentDoll ?: return
+        val objectLayers =
+            doll.layers.filter { it.descriptor.objectId == objId }
+        val objectFixed = objectLayers.any { it.descriptor.isFixed }
+
+        if (objectFixed) {
+            actions.distinct().forEach {
+                performAction(it)
+            }
+        }
+
+        refreshTrigger++
+    }
+
+    /**
+    When no `fixdrop()` action happens, we revert the `fixcatch()` event instead.
+     */
+    fun revertFixCatchActions(fixCatchId: Int) {
+        val actions = configParser.fixCatchActions[fixCatchId.toString()] ?: return
+
+        // Remove the touched object
+        activeFixCatchIds.remove(fixCatchId)
+        refreshTrigger++
+
+        // Reverse the associated mapping commands
+        actions.forEach { action ->
+            when (action.type) {
+                // Momentary Toggle: If MAP was called on press, call UNMAP on release
+                ActionType.MAP -> {
+                    val targetId = action.target.replace("#", "").toIntOrNull() ?: return@forEach
+                    activeFixCatchIds.remove(targetId)
+                    setMapping(action.target, false)
+                }
+
+                ActionType.UNMAP -> {
+                    // If it was hidden, bring it back
+                    setMapping(action.target, true)
+                }
+
+                else -> {}
+            }
+        }
+
+        refreshTrigger++
+    }
+
     /**
     `release()` FKiSS events
      */
@@ -1217,86 +1556,47 @@ class ViewModel(application: Application) :
         refreshTrigger++
     }
 
-    /** Triggers release actions by name */
-    @Suppress("unused")
-    fun triggerReleaseByName(target: String) {
-        val cleanTarget = target.replace("#", "").lowercase()
+    /**
+    `drop()` FKiSS events. Similar to `release()` events, except they only fire when an object is unfixed.
+     */
+    fun executeDropActions(hitLayer: KissLayer) {
+        val objIdStr = hitLayer.descriptor.objectId.toString()
+        val fileName = hitLayer.descriptor.fileName.lowercase().substringBefore(".")
+        val actions = (configParser.dropActions[objIdStr] ?: emptyList()) +
+                (configParser.dropActions[fileName] ?: emptyList())
 
-        // Get the actions for this specific target from your parser's bucket
-        val actions = configParser.releaseActions[cleanTarget] ?: emptyList()
+        val doll = currentDoll ?: return
+        val objId = hitLayer.descriptor.objectId
+        val objectLayers =
+            doll.layers.filter { it.descriptor.objectId == objId }
+        val objectFixed = objectLayers.any { it.descriptor.isFixed }
 
-        // Loop through them and apply them (just like executeReleaseActions does)
-        actions.forEach { action ->
-            when (action.type) {
-                ActionType.UNMAP -> setMappingStrict(action.target, true)
-                ActionType.MAP -> setMappingStrict(action.target, false)
-                ActionType.ALTMAP -> altMappingStrict(action.target)
-                ActionType.TIMER -> fireTimer(action)
-                ActionType.RANDOM_TIMER -> fireRandomTimer(action)
-                ActionType.SOUND -> {
-                    val target = action.target.replace("\"", "").lowercase()
-                    soundManager.play(target, false)
-                }
-                ActionType.MUSIC -> {
-                    val doll = currentDoll ?: return@forEach
-
-                    // Your parser puts the filename in 'target' because it's the first parameter
-                    val rawTarget = action.target
-
-                    val cleanTarget =
-                        rawTarget.replace("\"", "").replace("null", "").trim().lowercase()
-
-                    if (cleanTarget.isNotEmpty()) {
-                        soundManager.handleMusicAction(cleanTarget, doll.allFiles)
-                    } else {
-                        soundManager.stopMusic()
-                    }
-                }
-                // If this action is ANOTHER release, THEN you recurse
-                ActionType.RELEASE -> triggerReleaseByName(action.target)
-                ActionType.DROP -> {
-                    val targetId = target.toIntOrNull()
-                    val targetLayer = currentDoll?.layers?.find { layer ->
-                        val layerName =
-                            layer.descriptor.fileName.lowercase().substringBefore(".")
-                        if (targetId != null) {
-                            layer.descriptor.objectId == targetId
-                        } else {
-                            layerName == target
-                        }
-                    }
-                    val isGroupFixed = currentDoll?.layers?.any {
-                        targetLayer?.descriptor?.objectId == targetId && targetLayer?.descriptor?.isFixed == true
-                    }
-
-                    if (isGroupFixed == false) {
-                        targetLayer?.let { triggerReleaseByName(action.target) }
-                    }
-                }
-
-                ActionType.FIXDROP -> {
-                    val targetId = target.toIntOrNull()
-                    val targetLayer = currentDoll?.layers?.find { layer ->
-                        val layerName =
-                            layer.descriptor.fileName.lowercase().substringBefore(".")
-                        if (targetId != null) {
-                            layer.descriptor.objectId == targetId
-                        } else {
-                            layerName == target
-                        }
-                    }
-                    val isGroupFixed = currentDoll?.layers?.any {
-                        targetLayer?.descriptor?.objectId == targetId && targetLayer?.descriptor?.isFixed == true
-                    }
-
-                    if (isGroupFixed == true) {
-                        targetLayer?.let { triggerReleaseByName(action.target) }
-                    }
-                }
-
-                else -> {}
-            }
+        if (!objectFixed) {
+            actions.distinct().forEach { performAction(it) }
         }
+        refreshTrigger++
+    }
+
+    /**
+    `fixdrop()` FKiSS events. Similar to `release()` events, except they only fire when an object is fixed.
+     */
+    fun executeFixDropActions(hitLayer: KissLayer) {
+        val objIdStr = hitLayer.descriptor.objectId.toString()
+        val fileName = hitLayer.descriptor.fileName.lowercase().substringBefore(".")
+        val actions = (configParser.fixDropActions[objIdStr] ?: emptyList()) +
+                (configParser.fixDropActions[fileName] ?: emptyList())
+
+        val doll = currentDoll ?: return
+        val objId = hitLayer.descriptor.objectId
+        val objectLayers =
+            doll.layers.filter { it.descriptor.objectId == objId }
+        val objectFixed = objectLayers.any { it.descriptor.isFixed }
+
+        if (objectFixed) {
+            actions.distinct().forEach { performAction(it) }
+        }
+
+        refreshTrigger++
     }
 
     /** Execute actions that trigger upon `unfix` */
@@ -1304,6 +1604,36 @@ class ViewModel(application: Application) :
         val objIdStr = hitLayer.descriptor.objectId.toString()
         val fileName = hitLayer.descriptor.fileName.lowercase().substringBefore(".")
         val actions = (configParser.unfixActions[objIdStr] ?: emptyList()) + (configParser.unfixActions[fileName] ?: emptyList())
+
+        actions.distinct().forEach { performAction(it) }
+        refreshTrigger++
+    }
+
+    /** Execute actions that trigger upon `stillin` */
+    fun executeStillInActions(layer1: KissLayer, layer2: KissLayer) {
+        val layer1Obj = layer1.descriptor.objectId.toString()
+        val layer2Obj = layer2.descriptor.objectId.toString()
+        val actions = (configParser.stillInActions["$layer1Obj,$layer2Obj".replace(", ",",").replace("#", "")] ?: emptyList()) + (configParser.stillInActions["$layer2Obj,$layer1Obj".replace(", ", ",").replace("#", "")] ?: emptyList())
+
+        actions.distinct().forEach { performAction(it) }
+        refreshTrigger++
+    }
+
+    /** Execute actions that trigger upon `stillout` */
+    fun executeStillOutActions(layer1: KissLayer, layer2: KissLayer) {
+        val layer1Obj = layer1.descriptor.objectId.toString()
+        val layer2Obj = layer2.descriptor.objectId.toString()
+        val actions = (configParser.stillOutActions["$layer1Obj,$layer2Obj".replace(", ", ",").replace("#", "")] ?: emptyList()) + (configParser.stillOutActions["$layer2Obj,$layer1Obj".replace(
+            ", ", ",").replace("#", "")] ?: emptyList())
+
+        actions.distinct().forEach { performAction(it) }
+        refreshTrigger++
+    }
+
+    /** Execute actions that trigger upon changing the active palette */
+    fun executeColActions(colStr: String) {
+        val actions = (configParser.colActions[colStr]
+            ?: emptyList()) + (configParser.colActions[colStr] ?: emptyList())
 
         actions.distinct().forEach { performAction(it) }
         refreshTrigger++
@@ -1447,6 +1777,7 @@ class ViewModel(application: Application) :
     }
 
     /** `altmap()` FKiSS event */
+    @Suppress("unused")
     fun altMapping(target: String) {
         val cleanTarget = target.replace("#", "").replace("\"", "").trim()
             .lowercase().removeSuffix(".cel")

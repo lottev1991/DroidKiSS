@@ -88,6 +88,6 @@ class CelDecoder {
         }
 
         val bitmap = Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)
-        return DecodeResult(bitmap, data.copyOfRange(dataOffset, data.size), offsetX, offsetY)
+        return DecodeResult(bitmap, data.copyOfRange(dataOffset, data.size), offsetX, offsetY, bitDepth)
     }
 }

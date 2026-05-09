@@ -61,8 +61,6 @@ package moe.lottev.droidkiss;
 
  */
 
-import android.util.Log;
-
 import java.io.*;
 import java.util.Vector;
 import java.util.zip.ZipException;
@@ -128,7 +126,6 @@ public class LhaFile extends ArchiveFile {
             // This is the expected way the loop ends
             open = true;
         } catch (IOException e) {
-            Log.e("KiSS_JAVA", "Open failed at entry: " + e.getMessage());
             //noinspection CallToPrintStackTrace
             e.printStackTrace(); // THIS WILL TELL US THE EXACT LINE IN LHAENTRY
             // If we found NO entries, then it's a truly invalid LZH
