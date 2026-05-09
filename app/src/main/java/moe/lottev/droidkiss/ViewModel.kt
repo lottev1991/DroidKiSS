@@ -994,55 +994,59 @@ class ViewModel(application: Application) :
         val pixels = IntArray(width * height)
         val data = layer.rawIndices
 
-        // Check if we are dealing with an 8-bit (256-color) or 4-bit (16-color) layer
+        // Check if we are dealing with a 32-bit (true-color), 8-bit (256-color) or 4-bit (16-color) layer
         // 8-bit data size is usually Width * Height
         // 4-bit data size is usually (Width * Height + 1) / 2
-        val is8Bit = palette.size > 16
 
-        if (layer.bitDepth == 32 && palette.isNotEmpty()) {
-            var cursor = 0
-            for (i in pixels.indices) {
-                if (cursor + 3 >= data.size) break
+        when (layer.bitDepth) {
+            32 -> {
+                var cursor = 0
+                for (i in pixels.indices) {
+                    if (cursor + 3 >= data.size) break
 
-                // We MUST reconstruct the Int from the 4 bytes in the ByteArray
-                val b = data[cursor++].toInt() and 0xFF
-                val g = data[cursor++].toInt() and 0xFF
-                val r = data[cursor++].toInt() and 0xFF
-                val a = data[cursor++].toInt() and 0xFF
+                    // We MUST reconstruct the Int from the 4 bytes in the ByteArray
+                    val b = data[cursor++].toInt() and 0xFF
+                    val g = data[cursor++].toInt() and 0xFF
+                    val r = data[cursor++].toInt() and 0xFF
+                    val a = data[cursor++].toInt() and 0xFF
 
-                pixels[i] = (a shl 24) or (r shl 16) or (g shl 8) or b
+                    pixels[i] = (a shl 24) or (r shl 16) or (g shl 8) or b
+                }
             }
-        } else if (is8Bit) {
-            // 8-Bit Path: One byte = One pixel
-            for (i in 0 until (width * height)) {
-                if (i >= data.size) break
-                val colorIndex = data[i].toInt() and 0xFF
 
-                // Rule: Color 0 is always transparent
-                pixels[i] = if (colorIndex == 0) 0 else palette.getOrElse(colorIndex) { 0 }
+            8 -> {
+                // 8-Bit Path: One byte = One pixel
+                for (i in 0 until (width * height)) {
+                    if (i >= data.size) break
+                    val colorIndex = data[i].toInt() and 0xFF
+
+                    // Rule: Color 0 is always transparent
+                    pixels[i] = if (colorIndex == 0) 0 else palette.getOrElse(colorIndex) { 0 }
+                }
             }
-        } else {
-            // 4-Bit Path: One byte = Two pixels (Packed Nibbles)
-            var cursor = 0
-            for (y in 0 until height) {
-                for (x in 0 until width step 2) {
-                    if (cursor >= data.size) break
-                    val byte = data[cursor++].toInt() and 0xFF
 
-                    // Pixel 1 (High Nibble)
-                    val idx1 = (byte ushr 4) and 0x0F
-                    pixels[y * width + x] = if (idx1 == 0) 0 else palette.getOrElse(idx1) { 0 }
+            4 -> {
+                // 4-Bit Path: One byte = Two pixels (Packed Nibbles)
+                var cursor = 0
+                for (y in 0 until height) {
+                    for (x in 0 until width step 2) {
+                        if (cursor >= data.size) break
+                        val byte = data[cursor++].toInt()
 
-                    // Pixel 2 (Low Nibble) - only if within row width
-                    if (x + 1 < width) {
-                        val idx2 = byte and 0x0F
-                        pixels[y * width + x + 1] =
-                            if (idx2 == 0) 0 else palette.getOrElse(idx2) { 0 }
+                        // Pixel 1 (High nibble)
+                        val idx1 = (byte shr 4) and 0x0F
+                        pixels[y * width + x] = if (idx1 == 0) 0 else palette.getOrElse(idx1) { 0 }
+
+                        // Pixel 2 (Low Nibble) - only if within row width
+                        if (x + 1 < width) {
+                            val idx2 = byte and 0x0F
+                            pixels[y * width + x + 1] =
+                                if (idx2 == 0) 0 else palette.getOrElse(idx2) { 0 }
+                        }
                     }
                 }
             }
         }
-
         layer.bitmap = Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)
     }
 
