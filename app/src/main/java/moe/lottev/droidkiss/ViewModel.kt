@@ -735,7 +735,7 @@ class ViewModel(application: Application) :
                 ActionType.MUSIC -> {
                     val doll = currentDoll ?: return true
                     val cleanTarget =
-                        action.target.replace("\"", "").replace("null", "").trim().lowercase()
+                        action.target.replace("\"", "").trim().lowercase()
                     if (cleanTarget.isNotEmpty()) {
                         soundManager.handleMusicAction(cleanTarget, doll.allFiles)
                     } else {
@@ -880,7 +880,13 @@ class ViewModel(application: Application) :
                     val target = action.target.lowercase()
                     if (target.startsWith("http://") || target.startsWith("https://") || target.startsWith(
                             "www.") || target.startsWith("mailto:")) {
-                        executeShellEvent(action)
+                        // Make it so that URLs starting with "www." still get parsed
+                        val finalUrl = if (target.startsWith("www.")) {
+                            "http://$target"
+                        } else {
+                            target
+                        }
+                        executeShellEvent(finalUrl)
                     }
                     return true
                 }
@@ -1361,9 +1367,9 @@ class ViewModel(application: Application) :
     }
 
     /** `shell()` events. Only work on web URLS and email addresses. */
-    fun executeShellEvent(action: KissAction) {
+    fun executeShellEvent(target: String) {
         viewModelScope.launch {
-            _eventFlow.emit(ShellEvent.OpenLink(action.target))
+            _eventFlow.emit(ShellEvent.OpenLink(target))
         }
     }
 
