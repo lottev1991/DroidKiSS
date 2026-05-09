@@ -554,10 +554,12 @@ class ViewModel(application: Application) :
 
                 ActionType.IFMAPPED -> {
                     val doll = currentDoll ?: return true
+                    val target = action.target.replace("#", "").lowercase()
+                    val targetId = target.toIntOrNull()
 
                     doll.layers.forEach { layer ->
                         val desc = layer.descriptor
-                        if (!desc.isUnmapped) {
+                        if (!desc.isUnmapped && (target == desc.fileName || targetId == desc.objectId)) {
                             fireSpecialTimer(action)
                         }
                     }
@@ -565,10 +567,12 @@ class ViewModel(application: Application) :
                 }
                 ActionType.IFNOTMAPPED -> {
                     val doll = currentDoll ?: return true
+                    val target = action.target.replace("#", "").lowercase()
+                    val targetId = target.toIntOrNull()
 
                     doll.layers.forEach { layer ->
                         val desc = layer.descriptor
-                        if (desc.isUnmapped) {
+                        if (desc.isUnmapped && (target == desc.fileName || targetId == desc.objectId)) {
                             fireSpecialTimer(action)
                         }
                     }
@@ -752,16 +756,13 @@ class ViewModel(application: Application) :
 
                 ActionType.MOVETO -> {
                     val targetId = action.target.replace("#", "").toIntOrNull() ?: return true
-                    val coords = action.valueStr.split(",")
-                    if (coords.size >= 2) {
-                        val tx = coords[0].trim().toIntOrNull() ?: 0
-                        val ty = coords[1].trim().toIntOrNull() ?: 0
-                        val layer = currentDoll?.layers?.find { it.descriptor.objectId == targetId }
-                        if (layer != null) {
-                            val finalX = tx - layer.x
-                            val finalY = ty - layer.y
-                            currentOffsets[targetId] = Offset(finalX.toFloat(), finalY.toFloat())
-                        }
+                    val xValue = action.valueStr.trim().toIntOrNull() ?: 0
+                    val yValue = action.extraValue.trim().toIntOrNull() ?: 0
+                    val layer = currentDoll?.layers?.find { it.descriptor.objectId == targetId }
+                    if (layer != null) {
+                        val finalX = xValue - layer.x
+                        val finalY = yValue - layer.y
+                        currentOffsets[targetId] = Offset(finalX.toFloat(), finalY.toFloat())
                     }
                     return true
                 }
@@ -1267,9 +1268,11 @@ class ViewModel(application: Application) :
      */
     fun moveRelative(action: KissAction) {
         val movingId = action.target.replace("#", "").toIntOrNull() ?: return
-        val parts = action.valueStr.split(",").map { it.trim().replace("#", "") }
-        val anchorId = parts[0].toIntOrNull() ?: 0
-        val offsetVal = if (parts.size > 1) parts[1].toFloatOrNull() ?: 0f else 0f
+        val value = action.valueStr.replace("#", "")
+        val extraValue = action.extraValue.replace("#", "")
+
+        val anchorId = value.toIntOrNull() ?: 0
+        val offsetVal = extraValue.toIntOrNull() ?: 0
 
         val doll = currentDoll ?: return
         val anchorLayer =
@@ -1676,7 +1679,7 @@ class ViewModel(application: Application) :
         refreshTrigger++
     }
 
-    /** Special timer for `iffixed`/`ifnotfixed`/`ifmapped`/`ifnotmapped` */
+    /** Special timer for `iffixed`/`ifnotfixed`/`ifmapped`/`ifnotmapped`/`ifmoved`/`ifnotmoved` */
     fun fireSpecialTimer(action: KissAction) {
         val target = action.target.replace("#","").lowercase()
         val id = action.valueStr.toIntOrNull() ?: return
