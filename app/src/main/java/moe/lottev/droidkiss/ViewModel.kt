@@ -784,28 +784,6 @@ class ViewModel(application: Application) :
                     return true
                 }
 
-                ActionType.UNFIX -> {
-                    val target = action.target.replace("#", "").lowercase()
-                    val targetId = target.toIntOrNull()
-                    val targetLayer = currentDoll?.layers?.find { layer ->
-                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
-                        if (targetId != null && !target.contains(".")) {
-                            layer.descriptor.objectId == targetId
-                        } else {
-                            layerName == target
-                        }
-                    }
-                    if (targetLayer != null || (targetId != null && targetId == 0)) {
-                        targetLayer?.descriptor?.isFixed = false
-                        if (targetLayer != null) {
-                            executeUnfixActions(targetLayer)
-                        }
-                    }
-
-                    refreshTrigger++
-                    return true
-                }
-
                 ActionType.SETFIX -> {
                     val target = action.target.replace("#", "").lowercase()
                     val targetId = target.toIntOrNull()
@@ -824,7 +802,7 @@ class ViewModel(application: Application) :
 
                         if (isMatch) {
                             layer.descriptor.isFixed = shouldFix
-                            if (shouldFix) {
+                            if (!shouldFix) {
                                 executeUnfixActions(layer)
                             }
                         }
