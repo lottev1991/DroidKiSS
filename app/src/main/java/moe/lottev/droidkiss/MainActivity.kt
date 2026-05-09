@@ -938,7 +938,6 @@ fun DollMenu(viewModel: ViewModel, onLaunchPicker: () -> Unit) {
 
     Box(
         contentAlignment = Alignment.BottomStart,
-        modifier = Modifier.padding(50.dp, 0.dp, 0.dp, 0.dp)
     ) {
         IconButton(
             colors = IconButtonDefaults.iconButtonColors(
