@@ -10,7 +10,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
     val cels = mutableListOf<KissLayerDescriptor>()
     val kcfs = mutableListOf<String>()
     private val layers = mutableListOf<KissLayer>()
-    val eventActions = mutableMapOf<String, List<KissAction>>()
+    val eventActions = mutableMapOf<String, MutableList<KissAction>>()
 
     // Map to store timer intervals (e.g., "alarm1" -> 500ms)
     val alarmIntervals = mutableMapOf<String, Long>()
@@ -20,31 +20,31 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
     val currentEventActions = mutableListOf<KissAction>()
 
     // Example structure to store them
-    val pressActions = mutableMapOf<String, List<KissAction>>()
-    val releaseActions = mutableMapOf<String, List<KissAction>>()
+    val pressActions = mutableMapOf<String, MutableList<KissAction>>()
+    val releaseActions = mutableMapOf<String, MutableList<KissAction>>()
 
-    val catchActions = mutableMapOf<String, List<KissAction>>()
-    val dropActions = mutableMapOf<String, List<KissAction>>()
+    val catchActions = mutableMapOf<String, MutableList<KissAction>>()
+    val dropActions = mutableMapOf<String, MutableList<KissAction>>()
 
-    val fixCatchActions = mutableMapOf<String, List<KissAction>>()
-    val fixDropActions = mutableMapOf<String, List<KissAction>>()
+    val fixCatchActions = mutableMapOf<String, MutableList<KissAction>>()
+    val fixDropActions = mutableMapOf<String, MutableList<KissAction>>()
 
-    val inActions = mutableMapOf<String, List<SnapRule>>()
-    val inEventActions = mutableMapOf<String, List<KissAction>>()
+    val inActions = mutableMapOf<String, MutableList<SnapRule>>()
+    val inEventActions = mutableMapOf<String, MutableList<KissAction>>()
 
-    val stillInActions = mutableMapOf<String, List<KissAction>>()
-    val stillOutActions = mutableMapOf<String, List<KissAction>>()
+    val stillInActions = mutableMapOf<String, MutableList<KissAction>>()
+    val stillOutActions = mutableMapOf<String, MutableList<KissAction>>()
 
-    val collideActions = mutableMapOf<String, List<KissAction>>()
-    val apartActions = mutableMapOf<String, List<KissAction>>()
+    val collideActions = mutableMapOf<String, MutableList<KissAction>>()
+    val apartActions = mutableMapOf<String, MutableList<KissAction>>()
 
-    val setActions = mutableMapOf<String, List<KissAction>>()
+    val setActions = mutableMapOf<String, MutableList<KissAction>>()
 
-    val unfixActions = mutableMapOf<String, List<KissAction>>()
+    val unfixActions = mutableMapOf<String, MutableList<KissAction>>()
 
-    val labelActions = mutableMapOf<String, List<KissAction>>()
+    val labelActions = mutableMapOf<String, MutableList<KissAction>>()
 
-    val colActions = mutableMapOf<String, List<KissAction>>()
+    val colActions = mutableMapOf<String, MutableList<KissAction>>()
 
     val endActions = mutableListOf<KissAction>()
 
@@ -172,10 +172,10 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
 
             val isNewHeader =
                 startsWithAt || isInLine || isOutLine || isStillInLine || isStillOutLine || isPressLine || isReleaseLine || isCatchLine || isDropLine || isFixCatchLine || isFixDropLine || isCollideLine || isApartLine || isSetLine || isAlarmLine || isUnfixLine || isLabelLine || isColLine || isEndLine || (cleaned.contains("(") && !hasForbiddenWord)
-            val isOldHeader = lowerLine.startsWith("begin")
+            val isOldHeader = lowerLine.startsWith("begin") || lowerLine.startsWith("end")
 
             // Special events
-            val offLimits = listOf("eventhandler", "begin")
+            val offLimits = listOf("eventhandler", "begin", "end")
             val firstCmd = allMatches.getOrNull(0)?.groupValues?.get(1)?.lowercase() ?: ""
             val isOffLimits = offLimits.contains(firstCmd)
 
@@ -332,7 +332,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
             // --- C. ACTION COLLECTION ---
             if (currentEventName != null && cleaned.contains("(")) {
                 // This regex finds: action(param1, param2)
-                val actionRegex = Regex("""(\w+)\s*\(([^)]+)\)""")
+                val actionRegex = Regex("""(\w+)\s*\(?([^)]+)\)""")
                 val matches = actionRegex.findAll(cleaned)
 
                 matches.forEach { match ->
@@ -443,40 +443,40 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
             .lowercase()
             .removeSuffix(".cel")
         if (name.contains("press", ignoreCase = true)) {
-            pressActions[cleanTrigger] = currentEventActions.toList()
+            pressActions.getOrPut(cleanTrigger) { mutableListOf() }.addAll(currentEventActions)
         } else if (name.contains("release", ignoreCase = true)) {
-            releaseActions[cleanTrigger] = currentEventActions.toList()
+            releaseActions.getOrPut(cleanTrigger) { mutableListOf() }.addAll(currentEventActions)
         } else if (name.contains("catch", ignoreCase = true) && !name.contains("fixcatch", ignoreCase = true)) {
-            catchActions[cleanTrigger] = currentEventActions.toList()
+            catchActions.getOrPut(cleanTrigger) { mutableListOf() }.addAll(currentEventActions)
         } else if (name.contains("drop", ignoreCase = true) && !name.contains("fixdrop", ignoreCase = true)) {
-            dropActions[cleanTrigger] = currentEventActions.toList()
+            dropActions.getOrPut(cleanTrigger) { mutableListOf() }.addAll(currentEventActions)
         } else if (name.contains("fixcatch", ignoreCase = true)) {
-            fixCatchActions[cleanTrigger] = currentEventActions.toList()
+            fixCatchActions.getOrPut(cleanTrigger) { mutableListOf() }.addAll(currentEventActions)
         } else if (name.contains("fixdrop", ignoreCase = true)) {
-            fixDropActions[cleanTrigger] = currentEventActions.toList()
+            fixDropActions.getOrPut(cleanTrigger) { mutableListOf() }.addAll(currentEventActions)
         } else if (name.equals("in", ignoreCase = true)) {
-            inActions[cleanTrigger] = snapRules.toList()
-            inEventActions[cleanTrigger] = currentEventActions.toList()
+            inActions[cleanTrigger] = snapRules.toMutableList()
+            inEventActions.getOrPut(cleanTrigger) { mutableListOf() }.addAll(currentEventActions)
         } else if (name.contains("collide", ignoreCase = true)) {
-            collideActions[cleanTrigger] = currentEventActions.toList()
+            collideActions.getOrPut(cleanTrigger) { mutableListOf() }.addAll(currentEventActions)
         } else if (name.contains("apart", ignoreCase = true)) {
-            apartActions[cleanTrigger] = currentEventActions.toList()
+            apartActions.getOrPut(cleanTrigger) { mutableListOf() }.addAll(currentEventActions)
         } else if (name.contains("set", ignoreCase = true) && !name.contains("setfix", ignoreCase = true)) {
-            setActions[cleanTrigger] = currentEventActions.toList()
+            setActions.getOrPut(cleanTrigger) { mutableListOf() }.addAll(currentEventActions)
         } else if (name.contains("unfix", ignoreCase = true)) {
-            unfixActions[cleanTrigger] = currentEventActions.toList()
+            unfixActions.getOrPut(cleanTrigger) { mutableListOf() }.addAll(currentEventActions)
         } else if (name.contains("label", ignoreCase = true)) {
-            labelActions[cleanTrigger] = currentEventActions.toList()
+            labelActions.getOrPut(cleanTrigger) { mutableListOf() }.addAll(currentEventActions)
         } else if (name.contains("stillin", ignoreCase = true)) {
-            stillInActions[cleanTrigger] = currentEventActions.toList()
+            stillInActions.getOrPut(cleanTrigger) { mutableListOf() }.addAll(currentEventActions)
         } else if (name.contains("stillout", ignoreCase = true)) {
-            stillOutActions[cleanTrigger] = currentEventActions.toList()
+            stillOutActions.getOrPut(cleanTrigger) { mutableListOf() }.addAll(currentEventActions)
         } else if (name.contains("col", ignoreCase = true) && !name.contains("collide", ignoreCase = true)) {
-            colActions[cleanTrigger] = currentEventActions.toList()
+            colActions.getOrPut(cleanTrigger) { mutableListOf() }.addAll(currentEventActions)
         } else if (name.contains("end", ignoreCase = true)) {
-            endActions.addAll(currentEventActions.toList())
+            endActions.addAll(currentEventActions.toMutableList())
         } else {
-            eventActions[name.lowercase().replace(" ", "")] = currentEventActions.toList()
+            eventActions[name.lowercase().replace(" ", "")] = currentEventActions.toMutableList()
         }
         currentEventActions.clear()
         currentEventName = null
@@ -680,7 +680,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
     }
 
     /** Parses actions from CNF lines. */
-    fun parseActionsFromLine(payload: String): List<KissAction> {
+    fun parseActionsFromLine(payload: String): MutableList<KissAction> {
         val actions = mutableListOf<KissAction>()
         // Finds patterns like command(param)
         val regex = Regex("""(\w+)\s*\(([^)]*)\)""")
