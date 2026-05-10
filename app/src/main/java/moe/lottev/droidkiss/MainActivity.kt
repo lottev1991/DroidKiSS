@@ -262,7 +262,7 @@ class MainActivity : ComponentActivity() {
 
     /** When the app shuts down. */
     override fun onDestroy() {
-        viewModel.executeEvent("end")
+        viewModel.executeEndActions()
         viewModel.soundManager.stopAll()
         viewModel.stopTimer()
         super.onDestroy()

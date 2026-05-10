@@ -198,11 +198,12 @@ class ViewModel(application: Application) :
     fun closeArchive() {
         if (currentDoll != null && uiState == KissUiState.Loaded(currentDoll!!)) {
             // Trigger any end() events if doll is loaded
-            executeEvent("end")
+            executeEndActions()
         }
         viewModelScope.launch {
-            uiState = KissUiState.Loading
             shutdownCurrentDoll()
+            uiState = KissUiState.Loading
+            delay(500)
             uiState = KissUiState.Empty
         }
     }
@@ -211,11 +212,11 @@ class ViewModel(application: Application) :
     fun loadArchive(context: Context, uri: Uri, specificCnf: String? = null) {
         if (currentDoll != null && uiState == KissUiState.Loaded(currentDoll!!)) {
             // Trigger any end() events if doll is loaded
-            executeEvent("end")
+            executeEndActions()
         }
-        uiState = KissUiState.Loading
         viewModelScope.launch {
             shutdownCurrentDoll()
+            uiState = KissUiState.Loading
             isExpansionSet = false
 
             availableCnfs = emptyList() // Reset CNF list for the new archive
@@ -1627,6 +1628,13 @@ class ViewModel(application: Application) :
             ?: emptyList()) + (configParser.colActions[colStr] ?: emptyList())
 
         actions.distinct().forEach { performAction(it) }
+        refreshTrigger++
+    }
+
+    /** Execute actions that trigger upon closing the doll */
+    fun executeEndActions() {
+        val actions = configParser.endActions
+        actions.forEach { performAction(it) }
         refreshTrigger++
     }
 

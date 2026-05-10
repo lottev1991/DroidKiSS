@@ -46,6 +46,8 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
 
     val colActions = mutableMapOf<String, List<KissAction>>()
 
+    val endActions = mutableListOf<KissAction>()
+
     /** Global doll loader. This loads pretty much everything found in the current CNF. */
     @Suppress("RegExpRedundantClassElement")
     fun load(data: ByteArray) {
@@ -166,13 +168,14 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
             val isUnfixLine = cleaned.contains("unfix(", ignoreCase = true)
             val isLabelLine = cleaned.contains("label(", ignoreCase = true)
             val isColLine = cleaned.contains("col(", ignoreCase = true) && !cleaned.contains("changecol(", ignoreCase = true)
+            val isEndLine = cleaned.contains("end(", ignoreCase = true)
 
             val isNewHeader =
-                startsWithAt || isInLine || isOutLine || isStillInLine || isStillOutLine || isPressLine || isReleaseLine || isCatchLine || isDropLine || isFixCatchLine || isFixDropLine || isCollideLine || isApartLine || isSetLine || isAlarmLine || isUnfixLine || isLabelLine || isColLine || (cleaned.contains("(") && !hasForbiddenWord)
-            val isOldHeader = lowerLine.startsWith("begin") || lowerLine.startsWith("end")
+                startsWithAt || isInLine || isOutLine || isStillInLine || isStillOutLine || isPressLine || isReleaseLine || isCatchLine || isDropLine || isFixCatchLine || isFixDropLine || isCollideLine || isApartLine || isSetLine || isAlarmLine || isUnfixLine || isLabelLine || isColLine || isEndLine || (cleaned.contains("(") && !hasForbiddenWord)
+            val isOldHeader = lowerLine.startsWith("begin")
 
             // Special events
-            val offLimits = listOf("eventhandler", "begin", "end")
+            val offLimits = listOf("eventhandler", "begin")
             val firstCmd = allMatches.getOrNull(0)?.groupValues?.get(1)?.lowercase() ?: ""
             val isOffLimits = offLimits.contains(firstCmd)
 
@@ -203,6 +206,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                     isUnfixLine -> "unfix($raw)"
                     isLabelLine -> "label($raw)"
                     isColLine -> "col($raw)"
+                    isEndLine -> "end()"
                     isOldHeader -> cleaned.substringAfter("begin").trim().lowercase()
                     cleaned.lowercase().contains("initialize") -> "initialize"
                     else -> cleaned.removePrefix(";").removePrefix("@").substringBefore("(").trim()
@@ -296,6 +300,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                         "movetorand" -> ActionType.MOVETORAND
                         "windowsize" -> ActionType.WINDOWSIZE
                         "viewport" -> ActionType.VIEWPORT
+                        "end" -> ActionType.END
                         else -> null
                     }
 
@@ -399,6 +404,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                         "movetorand" -> ActionType.MOVETORAND
                         "windowsize" -> ActionType.WINDOWSIZE
                         "viewport" -> ActionType.VIEWPORT
+                        "end" -> ActionType.END
                         else -> null
                     }
 
@@ -467,6 +473,8 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
             stillOutActions[cleanTrigger] = currentEventActions.toList()
         } else if (name.contains("col", ignoreCase = true) && !name.contains("collide", ignoreCase = true)) {
             colActions[cleanTrigger] = currentEventActions.toList()
+        } else if (name.contains("end", ignoreCase = true)) {
+            endActions.addAll(currentEventActions.toList())
         } else {
             eventActions[name.lowercase().replace(" ", "")] = currentEventActions.toList()
         }
@@ -746,6 +754,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 "movetorand" -> ActionType.MOVETORAND
                 "windowsize" -> ActionType.WINDOWSIZE
                 "viewport" -> ActionType.VIEWPORT
+                "end" -> ActionType.END
                 else -> null
             }
 
