@@ -757,13 +757,16 @@ class ViewModel(application: Application) :
 
                 ActionType.MOVETO -> {
                     val targetId = action.target.replace("#", "").toIntOrNull() ?: return true
-                    val xValue = action.valueStr.trim().toIntOrNull() ?: 0
-                    val yValue = action.extraValue.trim().toIntOrNull() ?: 0
-                    val layer = currentDoll?.layers?.find { it.descriptor.objectId == targetId }
-                    if (layer != null) {
-                        val finalX = xValue - layer.x
-                        val finalY = yValue - layer.y
-                        currentOffsets[targetId] = Offset(finalX.toFloat(), finalY.toFloat())
+                    val coords = action.valueStr.split(",")
+                    if (coords.size >= 2) {
+                        val tx = coords[0].trim().toIntOrNull() ?: 0
+                        val ty = coords[1].trim().toIntOrNull() ?: 0
+                        val layer = currentDoll?.layers?.find { it.descriptor.objectId == targetId }
+                        if (layer != null) {
+                            val finalX = tx - layer.x
+                            val finalY = ty - layer.y
+                            currentOffsets[targetId] = Offset(finalX.toFloat(), finalY.toFloat())
+                        }
                     }
                     return true
                 }
