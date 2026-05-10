@@ -553,6 +553,23 @@ class ViewModel(application: Application) :
                     return true
                 }
 
+                ActionType.TRANSPARENT -> {
+                    val target = action.target.replace("#", "").lowercase()
+                    val targetId = target.toIntOrNull()
+                    val targetLayer = currentDoll?.layers?.find { layer ->
+                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
+                        if (targetId != null) layer.descriptor.objectId == targetId else layerName == target
+                    }
+                    val value = action.valueStr.toFloatOrNull() ?: 0f
+                    if (targetLayer != null) {
+                        val changedAlpha = targetLayer.alpha - (value / 255f)
+
+                        targetLayer.alpha = changedAlpha
+                    }
+
+                    return true
+                }
+
                 ActionType.IFMAPPED -> {
                     val doll = currentDoll ?: return true
                     val target = action.target.replace("#", "").lowercase()
@@ -756,18 +773,7 @@ class ViewModel(application: Application) :
                 }
 
                 ActionType.MOVETO -> {
-                    val targetId = action.target.replace("#", "").toIntOrNull() ?: return true
-                    val coords = action.valueStr.split(",")
-                    if (coords.size >= 2) {
-                        val tx = coords[0].trim().toIntOrNull() ?: 0
-                        val ty = coords[1].trim().toIntOrNull() ?: 0
-                        val layer = currentDoll?.layers?.find { it.descriptor.objectId == targetId }
-                        if (layer != null) {
-                            val finalX = tx - layer.x
-                            val finalY = ty - layer.y
-                            currentOffsets[targetId] = Offset(finalX.toFloat(), finalY.toFloat())
-                        }
-                    }
+                    moveAbsolute(action)
                     return true
                 }
 
@@ -1140,52 +1146,62 @@ class ViewModel(application: Application) :
             val stateKey = "active_$eventKey"
             val isCurrentlyTouching = activeCollisionPairs.contains(stateKey)
 
+            val isVisible = !srcLayer.descriptor.isUnmapped && !dstLayer.descriptor.isUnmapped
+
             // --- UNIFIED EXECUTION LOGIC ---
             when (type) {
                 "in" -> {
                     // Only fire if it's a NEW overlap
-                    if (isRectOverlapping) {
-                        activeCollisionPairs.add(stateKey)
-                        executeEvent(eventKey)
-                        executeStillInActions(srcLayer, dstLayer)
+                    if (isVisible) {
+                        if (isRectOverlapping) {
+                            activeCollisionPairs.add(stateKey)
+                            executeEvent(eventKey)
+                            executeStillInActions(srcLayer, dstLayer)
+                        }
                     }
                 }
 
                 "out" -> {
                     // Only fire if it WAS overlapping but now it's NOT
-                    if (!isRectOverlapping) {
-                        activeCollisionPairs.remove(stateKey)
-                        executeEvent(eventKey)
-                        executeStillOutActions(srcLayer, dstLayer)
+                    if (isVisible) {
+                        if (!isRectOverlapping) {
+                            activeCollisionPairs.remove(stateKey)
+                            executeEvent(eventKey)
+                            executeStillOutActions(srcLayer, dstLayer)
+                        }
                     }
                 }
 
                 "collide" -> {
-                    if (isOverlapping && !isCurrentlyTouching) {
-                        activeCollisionPairs.add(stateKey)
-                        executeEvent(eventKey) // FIRING HERE
-                    } else if (!isOverlapping && isCurrentlyTouching) {
-                        activeCollisionPairs.remove(stateKey)
+                    if (isVisible) {
+                        if (isOverlapping && !isCurrentlyTouching) {
+                            activeCollisionPairs.add(stateKey)
+                            executeEvent(eventKey) // FIRING HERE
+                        } else if (!isOverlapping && isCurrentlyTouching) {
+                            activeCollisionPairs.remove(stateKey)
+                        }
                     }
                 }
 
                 "apart" -> {
-                    if (!isOverlapping && isCurrentlyTouching) {
-                        activeCollisionPairs.remove(stateKey)
-                        executeEvent(eventKey) // FIRING HERE
-                    } else if (isOverlapping && !isCurrentlyTouching) {
-                        activeCollisionPairs.add(stateKey)
+                    if (isVisible) {
+                        if (!isOverlapping && isCurrentlyTouching) {
+                            activeCollisionPairs.remove(stateKey)
+                            executeEvent(eventKey) // FIRING HERE
+                        } else if (isOverlapping && !isCurrentlyTouching) {
+                            activeCollisionPairs.add(stateKey)
+                        }
                     }
                 }
             }
 
             // Cleanup the latch
-            if (!isRectOverlapping && (type == "in" || type == "out")) {
+            if ((!isRectOverlapping && (type == "in" || type == "out")) || !isVisible) {
                 activeCollisionPairs.remove(stateKey)
                 executeStillOutActions(srcLayer, dstLayer)
             }
 
-            if (!isOverlapping && (type == "collide" || type == "apart")) {
+            if ((!isOverlapping && (type == "collide" || type == "apart")) || !isVisible) {
                 activeCollisionPairs.remove(stateKey)
                 executeStillOutActions(srcLayer, dstLayer)
             }
@@ -1287,6 +1303,22 @@ class ViewModel(application: Application) :
             val anchorAbsY = anchorLayer.y + (currentOffsets[anchorId]?.y ?: 0f)
             val targetAbsY = (anchorAbsY + offsetVal) - celCorrectionY
             currentOffsets[movingId] = Offset(currentOffset.x, targetAbsY - movingLayer.y)
+        }
+    }
+
+    /**
+    `moveto()` FKiSS event (absolute position on playfield)
+     */
+    fun moveAbsolute(action: KissAction) {
+        val targetId = action.target.replace("#", "").toIntOrNull() ?: return
+
+        val xValue = action.valueStr.trim().toIntOrNull() ?: 0
+        val yValue = action.extraValue.trim().toIntOrNull() ?: 0
+        val layer = currentDoll?.layers?.find { it.descriptor.objectId == targetId }
+        if (layer != null) {
+            val finalX = xValue - layer.x
+            val finalY = yValue - layer.y
+            currentOffsets[targetId] = Offset(finalX.toFloat(), finalY.toFloat())
         }
     }
 

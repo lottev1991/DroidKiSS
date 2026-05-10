@@ -75,18 +75,17 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 envHeight = match.groupValues[2].toInt()
             }
 
-            val trimmed = rawLine.trim()
+            var cleaned = rawLine.trim()
 
-            if (trimmed.isEmpty() || (trimmed.startsWith(";") && !trimmed.contains("@"))) {
+            if (cleaned.isEmpty() || (cleaned.startsWith(";") && !cleaned.contains("@"))) {
                 return@forEach
             }
 
-            val codePart = trimmed.split(";")[0].trim()
+            val codePart = cleaned.split(";")[0].trim()
             val lowerCode = codePart.lowercase()
 
             val lineForObjects = rawLine.trim().replaceFirst(";", "").trim()
             val lowerLine = lineForObjects.lowercase()
-            var cleaned = rawLine.trim()
 
             if (!codePart.contains("(") && lowerCode.contains(".cel")) {
                 parseCelLine(lineForObjects)
@@ -541,7 +540,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
         // Group 2: The .Part (e.g. 99)
         // Group 3: The Filename
         val regex =
-            Regex("""#(\d+)(?:\.(\d+))?[\s\t]+([\w\d._-]+)[^*:\d]*(?:\*(\d+))?[^:\d]*(?::([\d\s]+))?""")
+            Regex("""#(\d+)(?:\.(\d+))?[\s\t]+([\w\d._\-+!@#$%^&=\[\]{}~`']+)[^*:<>"?[\u0000–\u001F]/\\|\d]*(?:\*(\d+))?[^:\d]*(?::([\d\s]+))?""")
         val match = regex.find(cleanLine)
 
         if (match != null) {
@@ -689,6 +688,8 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
             val cmd = match.groupValues[1]
             val params = match.groupValues[2].split(",").map { it.trim() }
             val rawTarget = params.getOrNull(0) ?: ""
+            val rawValue = params.getOrNull(1) ?: ""
+            val rawExtraValue = params.getOrNull(2) ?: ""
 
             val resolvedTarget = if (rawTarget.startsWith("#")) {
                 rawTarget.replace("#", "")
@@ -701,7 +702,30 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 rawTarget
             }
 
+            val resolvedValue = if (rawValue.startsWith("#")) {
+                rawValue.replace("#", "")
+            } else if (rawValue.contains(".") || rawValue.any { it.isLetter() }) {
+                // It's a filename! Look it up in the layers we just provided
+                val fileName = rawValue.replace("\"", "")
+                layers.find { it.descriptor.fileName.equals(fileName, true) }
+                    ?.descriptor?.objectId?.toString() ?: rawValue
+            } else {
+                rawValue
+            }
+
+            val resolvedExtraValue = if (rawExtraValue.startsWith("#")) {
+                rawExtraValue.replace("#", "")
+            } else if (rawExtraValue.contains(".") || rawExtraValue.any { it.isLetter() }) {
+                // It's a filename! Look it up in the layers we just provided
+                val fileName = rawExtraValue.replace("\"", "")
+                layers.find { it.descriptor.fileName.equals(fileName, true) }
+                    ?.descriptor?.objectId?.toString() ?: rawExtraValue
+            } else {
+                rawExtraValue
+            }
+
             val type = when (cmd) {
+                "transparent" -> ActionType.TRANSPARENT
                 "alarm" -> ActionType.ALARM
                 "in" -> ActionType.IN
                 "out" -> ActionType.OUT
@@ -775,8 +799,8 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                     KissAction(
                         target = finalTarget, // Store as #ID for consistency
                         type = type,
-                        valueStr = params.drop(1).joinToString(","),
-                        extraValue = ""
+                        valueStr = resolvedValue,
+                        extraValue = resolvedExtraValue
                     )
                 )
             }
@@ -911,11 +935,24 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 it.descriptor.fileName.equals(pending.dstRaw.replace("\"", ""), true)
             }?.descriptor?.objectId ?: -1
 
+            val nameA = actualLayers.find {
+                it.descriptor.fileName.equals(pending.srcRaw.replace("\"", ""), true) }?.descriptor?.fileName
+            val nameB = actualLayers.find {
+                it.descriptor.fileName.equals(pending.dstRaw.replace("\"", ""), true)
+            }?.descriptor?.fileName
+
             // Only store if we found both objects
-            if (idA != -1 && idB != -1) {
+            if (pending.srcRaw != nameA && pending.dstRaw != nameB && idA != -1 && idB != -1) {
                 // We store the key using IDs: e.g., "in_350_0"
                 val key1 = "${pending.type}_${idA}_${idB}"
                 val key2 = "${pending.type}_${idB}_${idA}" // Bidirectional for safety
+
+                eventActions[key1] = actions
+                eventActions[key2] = actions
+            } else {
+                // We store the cel names here if they are found instead of objects
+                val key1 = "${pending.type}_${nameA}_${nameB}"
+                val key2 = "${pending.type}_${nameB}_${nameA}"
 
                 eventActions[key1] = actions
                 eventActions[key2] = actions
