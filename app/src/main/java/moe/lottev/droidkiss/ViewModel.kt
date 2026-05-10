@@ -175,9 +175,6 @@ class ViewModel(application: Application) :
 
     /** Handles the cleanup and @end events before a doll is swapped or closed. */
     suspend fun shutdownCurrentDoll() {
-        // Clear current offsets
-        currentOffsets.clear()
-
         // Add a delay
         delay(500)
 
@@ -189,6 +186,9 @@ class ViewModel(application: Application) :
 
         // Clear master file cache for cleanup
         masterFileCache.clear()
+
+        // Clear current offsets
+        currentOffsets.clear()
     }
 
     var availableCnfs by mutableStateOf<List<String>>(emptyList())
