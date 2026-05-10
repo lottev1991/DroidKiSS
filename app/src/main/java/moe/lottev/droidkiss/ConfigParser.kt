@@ -139,11 +139,12 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 "move",
                 "windowsize",
                 "viewport",
+                "quit",
             )
 
             val hasForbiddenWord = forbidden.any { cleaned.contains(it) }
 
-            val actionRegex = Regex("""(\w+)\s*\(([^)]+)\)""")
+            val actionRegex = Regex("""(\w+)\s*\(?([^)]+)\)""")
 
             val allMatches = actionRegex.findAll(cleaned).toList()
             val startsWithAt = cleaned.replace(" ", "").startsWith(";@")
@@ -211,7 +212,7 @@ class ConfigParser(private val onMappingChanged: (String, Boolean) -> Unit) {
                 if (currentEventName!!.isEmpty()) currentEventName = "eventhandler"
 
                 // HARVEST ACTIONS (Do not let Part C do this for messy lines!)
-                val actionRegex = Regex("""(\w+)\s*\(([^)]+)\)""")
+                val actionRegex = Regex("""(\w+)\s*\(?([^)]+)\)""")
                 val matches = actionRegex.findAll(cleaned).toList()
 
                 // If there's more than 1 match, or if it's a messy line, grab everything
