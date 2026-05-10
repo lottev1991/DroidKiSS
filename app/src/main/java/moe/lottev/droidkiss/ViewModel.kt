@@ -1324,7 +1324,22 @@ class ViewModel(application: Application) :
 
     /** `moverandx()`/`moverandy()` FKiSS events (random relative move from self). */
     fun moveRelativeRandom(action: KissAction) {
+        val doll = currentDoll ?: return
         val movingId = action.target.replace("#", "").toIntOrNull() ?: return
+
+        val objectLayers =
+            doll.layers.asReversed()
+                .filter { it.descriptor.objectId == movingId && !it.descriptor.isUnmapped }
+
+        val minBaseX = objectLayers.minOf { it.x }
+        val minBaseY = objectLayers.minOf { it.y }
+        val maxBaseX = objectLayers.maxOf { it.x + it.bitmap.width }
+        val maxBaseY = objectLayers.maxOf { it.y + it.bitmap.height }
+
+        val minAllowedOffsetH = -minBaseX
+        val minAllowedOffsetV = -minBaseY
+        val maxAllowedOffsetH = (doll.envWidth - maxBaseX)
+        val maxAllowedOffsetV = (doll.envHeight - maxBaseY)
 
         val min = action.valueStr.toLongOrNull() ?: 0L
         val max = action.extraValue.toLongOrNull() ?: min
@@ -1334,9 +1349,18 @@ class ViewModel(application: Application) :
         val randomOffset = if (min < max) (min..max).random() else min
 
         if (action.type == ActionType.MOVERANDX) {
-            currentOffsets[movingId] = Offset(randomOffset.toFloat(), currentOffset.y)
+            currentOffsets[movingId] = Offset(
+                (currentOffset.x + randomOffset.toFloat()).coerceIn(
+                    minOf(minAllowedOffsetH, maxAllowedOffsetH).toFloat(),
+                    maxOf(minAllowedOffsetH, maxAllowedOffsetH).toFloat()),
+                currentOffset.y)
         } else {
-            currentOffsets[movingId] = Offset(currentOffset.x, randomOffset.toFloat())
+            currentOffsets[movingId] = Offset(
+                currentOffset.x,
+                (currentOffset.y + randomOffset.toFloat()).coerceIn(
+                    minOf(minAllowedOffsetV, maxAllowedOffsetV).toFloat(),
+                    maxOf(minAllowedOffsetV, maxAllowedOffsetV).toFloat())
+            )
         }
     }
 
