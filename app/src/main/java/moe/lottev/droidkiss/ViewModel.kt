@@ -556,15 +556,20 @@ class ViewModel(application: Application) :
                 ActionType.TRANSPARENT -> {
                     val target = action.target.replace("#", "").lowercase()
                     val targetId = target.toIntOrNull()
-                    val targetLayer = currentDoll?.layers?.find { layer ->
-                        val layerName = layer.descriptor.fileName.lowercase().substringBefore(".")
-                        if (targetId != null) layer.descriptor.objectId == targetId else layerName == target
-                    }
-                    val value = action.valueStr.toFloatOrNull() ?: 0f
-                    if (targetLayer != null) {
-                        val changedAlpha = targetLayer.alpha - (value / 255f)
+                    val targetName = target.replace("\"", "").trim().lowercase()
+                    val valueStr = action.valueStr.trim().replace("\"", "")
+                    val value = valueStr.toFloatOrNull() ?: 0f
+                    currentDoll?.layers?.forEach { layer ->
+                        val fileName = layer.descriptor.fileName.lowercase()
+                        val objectId = layer.descriptor.objectId
+                        if (fileName.startsWith(targetName) || objectId == targetId) {
+                            // Convert the KiSS 0-255 step to our 0.0-1.0 float step
+                            val changedAlpha = layer.alpha - (value / 255f)
 
-                        targetLayer.alpha = changedAlpha
+                            // Subtracting because KiSS 255 = Alpha 0 (Transparent)
+                            // So adding transparency means lowering the alpha.
+                            layer.alpha = changedAlpha.coerceIn(0f, 1f)
+                        }
                     }
 
                     return true
