@@ -1096,7 +1096,7 @@ fun PaletteMenu(viewModel: ViewModel) {
             onClick = { expanded = true }) {
             Icon(
                 Icons.Filled.ColorLens,
-                contentDescription = "palette menu (REPLACE WITH LOCALIZED STRING)",
+                contentDescription = stringResource(R.string.desc_pal_menu),
             )
         }
         DropdownMenu(
