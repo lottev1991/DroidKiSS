@@ -1225,7 +1225,6 @@ fun CnfSourceWindow(viewModel: ViewModel, onBackClick: () -> Unit) {
     }
 }
 
-
 /** Function to save doll screenshots. They get saved in a special folder; this is hardcoded. The filenames are hardcoded as well, containing the current date and time. */
 fun saveScreenshot(context: Context, bitmap: Bitmap, fileName: String) {
     val contentResolver = context.contentResolver
