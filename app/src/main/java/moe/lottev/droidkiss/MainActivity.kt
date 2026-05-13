@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -55,6 +54,7 @@ import kotlinx.coroutines.launch
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.content.res.XmlResourceParser
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -64,6 +64,8 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -119,6 +121,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.createBitmap
+import androidx.core.os.LocaleListCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import kotlin.let
@@ -126,13 +129,15 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import org.xmlpull.v1.XmlPullParser
+import java.util.Locale
 
 /**
  This is where the main app screen resides.
  Dolls, menus, buttons, and functions (both viewer functions as well as FKiSS functionality) all get rendered here.
  I also made the app translatable, this includes the content descriptions.
  */
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     private var fileUriState = mutableStateOf<Uri?>(null)
     private val viewModel: ViewModel by viewModels()
 
@@ -508,8 +513,6 @@ fun DollButtons(viewModel: ViewModel) {
     }
 }
 
-
-
 /** The doll screen. Loads the doll canvas, as well as the current UI state and the buttons. */
 @Composable
 fun DollScreen(viewModel: ViewModel, onLaunchPicker: () -> Unit) {
@@ -581,6 +584,7 @@ fun DollScreen(viewModel: ViewModel, onLaunchPicker: () -> Unit) {
                             MaterialTheme.colorScheme.onPrimary)) {
                             Text(stringResource(R.string.load_doll))
                         }
+                        LanguagePickerButton()
                         AppInfoButton()
                     }
                 }
@@ -903,7 +907,7 @@ fun DollCanvas(doll: KissDoll, viewModel: ViewModel, graphicsLayer: GraphicsLaye
 @Composable
 fun DollMenu(viewModel: ViewModel, onLaunchPicker: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    var showDialog by remember { mutableStateOf(false) }
+    var showInfoDialog by remember { mutableStateOf(false) }
 
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -914,8 +918,13 @@ fun DollMenu(viewModel: ViewModel, onLaunchPicker: () -> Unit) {
     }
     val screenshotMessage = stringResource(R.string.saved_screenshot_toast)
 
-    if (showDialog) {
-        AppInfoDialog(onDismiss = { showDialog = false })
+    if (showInfoDialog) {
+        AppInfoDialog(onDismiss = { showInfoDialog = false })
+    }
+
+    var showLangSwitcher by remember { mutableStateOf(false) }
+    if (showLangSwitcher) {
+        LanguagePickerScreen(onDismiss = { showLangSwitcher = false })
     }
 
     var showCnfSource by remember { mutableStateOf(false) }
@@ -1054,10 +1063,17 @@ fun DollMenu(viewModel: ViewModel, onLaunchPicker: () -> Unit) {
                 }
             )
             DropdownMenuItem(
+                text = { Text(stringResource(R.string.change_app_lang)) },
+                onClick = {
+                    expanded = false
+                    showLangSwitcher = true
+                }
+            )
+            DropdownMenuItem(
                 text = { Text(stringResource(R.string.app_info_btn)) },
                 onClick = {
                     expanded = false
-                    showDialog = true
+                    showInfoDialog = true
                 }
             )
         }
@@ -1225,6 +1241,80 @@ fun CnfSourceWindow(viewModel: ViewModel, onBackClick: () -> Unit) {
     }
 }
 
+@Suppress("AssignedValueIsNeverRead", "VariableNeverRead")
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LanguagePickerScreen(onDismiss: () -> Unit) {
+    var isShowing by remember { mutableStateOf(true) }
+    val context = LocalContext.current
+    val supportedLanguages = remember(context) { getSupportedLanguagesFromConfig(context) }
+
+    // Grabs active runtime locale configuration set via AppCompatDelegate
+    val currentLocaleCode = AppCompatDelegate.getApplicationLocales()[0]?.language ?: "en"
+    val currentLanguageLabel =
+        supportedLanguages.find { it.code == currentLocaleCode }?.displayName ?: "English"
+
+    var selectedItem by remember { mutableStateOf<String?>(null)}
+
+    if (!isShowing) {
+        onDismiss.invoke()
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss, // Use the passed lambda
+        title = { Text(
+            text = stringResource(R.string.change_app_lang),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        ) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+            ) {
+                supportedLanguages.forEach { language ->
+                    TextButton(
+                        onClick = {
+                            selectedItem = currentLanguageLabel
+                            changeAppLanguage(language.code)
+                            isShowing = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(language.displayName, textAlign = TextAlign.Left)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { // Use the passed lambda
+                Text(stringResource(R.string.close))
+            }
+        }
+    )
+}
+
+@Suppress("AssignedValueIsNeverRead")
+@Composable
+fun LanguagePickerButton() {
+    var showLangSwitcher by remember { mutableStateOf(false) }
+
+    if (showLangSwitcher) {
+        LanguagePickerScreen(onDismiss = { showLangSwitcher = false })
+    }
+
+    Button(
+        onClick = {
+            showLangSwitcher = true
+        }, border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.onPrimary
+        )
+    ) {
+        Text(stringResource(R.string.change_app_lang))
+    }
+}
+
 /** Function to save doll screenshots. They get saved in a special folder; this is hardcoded. The filenames are hardcoded as well, containing the current date and time. */
 fun saveScreenshot(context: Context, bitmap: Bitmap, fileName: String) {
     val contentResolver = context.contentResolver
@@ -1250,4 +1340,50 @@ fun saveScreenshot(context: Context, bitmap: Bitmap, fileName: String) {
             contentResolver.update(uri, imageDetails, null, null)
         }
     }
+}
+
+fun getSupportedLanguagesFromConfig(context: Context): List<AppLanguage> {
+    val languages = mutableListOf<AppLanguage>()
+
+    // Find the auto-generated or manual resource ID
+    val resId = R.xml.locales_config
+    if (resId == 0) return listOf(AppLanguage("en", "English")) // Fallback if missing
+
+    val parser: XmlResourceParser = context.resources.getXml(resId)
+
+    try {
+        var eventType = parser.eventType
+        while (eventType != XmlPullParser.END_DOCUMENT) {
+            if (eventType == XmlPullParser.START_TAG && parser.name == "locale") {
+                // Read the 'android:name' attribute
+                val localeCode =
+                    parser.getAttributeValue("http://schemas.android.com/apk/res/android", "name")
+                if (!localeCode.isNullOrEmpty()) {
+                    // Convert "en" -> "English" etc.
+                    val locale = Locale.forLanguageTag(localeCode)
+                    val displayName = locale.getDisplayName(locale)
+                        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+                    languages.add(AppLanguage(localeCode, displayName))
+                }
+            }
+            eventType = parser.next()
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    } finally {
+        parser.close()
+    }
+
+    // Default system fallback to allow user to revert back to system defaults
+    return languages.ifEmpty { listOf(AppLanguage("en", "English")) }
+}
+
+/** Changes the app language. */
+fun changeAppLanguage(languageCode: String) {
+    val localeList = if (languageCode.isEmpty()) {
+        LocaleListCompat.getEmptyLocaleList() // Follows overall device system language
+    } else {
+        LocaleListCompat.forLanguageTags(languageCode)
+    }
+    AppCompatDelegate.setApplicationLocales(localeList)
 }

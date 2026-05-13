@@ -1,5 +1,5 @@
 [versions]
-agp = "9.1.1"
+agp = "9.2.1"
 appcompat = "1.7.1"
 coreKtx = "1.18.0"
 junit = "4.13.2"
@@ -8,11 +8,12 @@ espressoCore = "3.7.0"
 libvlcAll = "3.7.0"
 lifecycleRuntimeKtx = "2.10.0"
 activityCompose = "1.13.0"
-kotlin = "2.3.20"
-composeBom = "2026.03.01"
+kotlin = "2.3.21"
+composeBom = "2026.05.00"
 compiler = "3.2.0-alpha11"
-runtime = "1.10.6"
-foundation = "1.10.6"
+runtime = "1.11.1"
+foundation = "1.11.1"
+foundationVersion = "1.11.1"
 
 [libraries]
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
@@ -34,7 +35,10 @@ androidx-compose-material3 = { group = "androidx.compose.material3", name = "mat
 libvlc-all = { module = "org.videolan.android:libvlc-all", version.ref = "libvlcAll" }
 androidx-compiler = { group = "androidx.databinding", name = "compiler", version.ref = "compiler" }
 androidx-compose-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "runtime" }
+#noinspection SimilarGradleDependency
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
+#noinspection SimilarGradleDependency
+androidx-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundationVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

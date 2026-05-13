@@ -8,6 +8,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 
+/** Class for app language switch. */
+data class AppLanguage(
+    val code: String, val displayName: String
+)
+
 /** Represents the parsed state of a KiSS doll. */
 data class KissDoll(
     val name: String,

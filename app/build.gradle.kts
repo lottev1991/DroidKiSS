@@ -24,11 +24,13 @@ android {
         applicationId = "moe.lottev.droidkiss"
         minSdk = 28
         targetSdk = 37
-        versionCode = 1
+        versionCode = 12
         versionName = "1.11.0-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         signingConfig = signingConfigs.getByName("debug")
+
+        base.archivesName.set("${applicationId?.replace("moe.lottev.", "")}-${versionName}")
     }
 
     signingConfigs {
@@ -107,6 +109,7 @@ android {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.foundation)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
@@ -127,4 +130,33 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        val variantName = variant.name
+        val capitalizedName = variantName.replaceFirstChar { it.uppercase() }
+
+        val vName = android.defaultConfig.versionName ?: ""
+
+        val copyMappingTask = tasks.register<Copy>("copyAndRenameMappingFor$capitalizedName") {
+            val buildDir = layout.buildDirectory
+
+            from(buildDir.dir("outputs/mapping/$variantName")) {
+                include("mapping.txt")
+                rename { "mapping-$vName-$variantName.txt".replace("Release", "") }
+            }
+
+            into(buildDir.dir("outputs/mapping-versioned/$variantName"))
+
+            outputs.upToDateWhen { false }
+        }
+
+        val targetTaskPrefixes = listOf("assemble", "bundle")
+        targetTaskPrefixes.forEach { prefix ->
+            tasks.matching { it.name == "$prefix$capitalizedName" }.configureEach {
+                finalizedBy(copyMappingTask)
+            }
+        }
+    }
 }
