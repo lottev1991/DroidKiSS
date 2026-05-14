@@ -24,8 +24,8 @@ android {
         applicationId = "moe.lottev.droidkiss"
         minSdk = 28
         targetSdk = 37
-        versionCode = 12
-        versionName = "1.11.0-beta"
+        versionCode = 13
+        versionName = "1.12.0-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         signingConfig = signingConfigs.getByName("debug")
